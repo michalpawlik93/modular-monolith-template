@@ -1,0 +1,23 @@
+{
+  "name": "lookup",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/lookup/src",
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["libs/lookup/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/libs/lookup"],
+      "options": {
+        "jestConfig": "libs/lookup/jest.config.ts",
+        "passWithNoTests": false
+      }
+    }
+  },
+  "tags": ["type:lib", "scope:domain-lookup"]
+}

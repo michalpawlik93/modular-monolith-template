@@ -1,0 +1,1 @@
+export { registerLookupRepository } from './di';
