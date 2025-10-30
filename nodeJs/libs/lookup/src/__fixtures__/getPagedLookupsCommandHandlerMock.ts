@@ -1,19 +1,29 @@
-import { ok, Result, BasicError, Handler, PagerResult } from '@app/core';
+import {
+  ok,
+  Result,
+  BasicError,
+  Handler,
+  PagerResult,
+  Envelope,
+  TYPES,
+} from '@app/core';
 import { Container, injectable } from 'inversify';
-import { GetPagedLookupsCommand } from '../application/pagedLookup/getPagedLookupsCommandHandler';
+import {
+  GET_PAGED_LOOKUPS_COMMAND,
+  GetPagedLookupsCommand,
+} from '../application/base/getPagedLookupsCommandHandler';
 import { Lookup, mockLookup } from '../domain/models/lookup';
 
 @injectable()
 class GetPagedLookupsCommandHandlerMock
-  implements
-    Handler<GetPagedLookupsCommand, Result<PagerResult<Lookup>, BasicError>>
+  implements Handler<GetPagedLookupsCommand, PagerResult<Lookup>>
 {
   constructor(
     private result?: Promise<Result<PagerResult<Lookup>, BasicError>>
   ) {}
 
   async handle(
-    _command: GetPagedLookupsCommand
+    _env: Envelope<GetPagedLookupsCommand>
   ): Promise<Result<PagerResult<Lookup>, BasicError>> {
     return (
       this.result ??
@@ -31,15 +41,14 @@ export const mockGetPagedLookupsCommandHandler = (
   container: Container,
   result?: Promise<Result<PagerResult<Lookup>, BasicError>>
 ): Container => {
-  const handlerName = GetPagedLookupsCommand.name;
-
-  if (container.isBound(handlerName)) {
-    container.unbind(handlerName);
+  if (container.isBound(TYPES.Handler)) {
+    container.unbindSync(TYPES.Handler);
   }
 
   container
-    .bind(handlerName)
-    .toConstantValue(new GetPagedLookupsCommandHandlerMock(result));
+    .bind<Handler<GetPagedLookupsCommand>>(TYPES.Handler)
+    .toConstantValue(new GetPagedLookupsCommandHandlerMock(result))
+    .whenNamed(GET_PAGED_LOOKUPS_COMMAND);
 
   return container;
 };

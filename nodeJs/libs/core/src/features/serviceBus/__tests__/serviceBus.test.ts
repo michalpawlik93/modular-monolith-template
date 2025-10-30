@@ -1,77 +1,107 @@
 import 'reflect-metadata';
 import { Container } from 'inversify';
 import {
-  ServiceBus,
-  IServiceBus,
+  InMemoryServiceBus,
+  ICommandBus,
   BaseCommand,
   Handler,
+  Envelope,
   Middleware,
+  TYPES,
+  NoHandlerErrorType,
 } from '../serviceBus';
-import { SERVICE_BUS_TOKENS } from '../di';
+import { COMMAND_BUS_TOKENS } from '../di';
+import { Result, BasicError, ok } from '../../../utils/result';
 
-class TestCommand implements BaseCommand {
-  constructor(
-    public userId: string,
-    public caller: string,
-    public data: string
-  ) {}
+interface TestCommand extends BaseCommand {
+  data: string;
 }
+
 
 class TestHandler implements Handler<TestCommand, { result: string }> {
-  async handle(command: TestCommand) {
-    return { result: `Handled: ${command.data}` };
+  async handle(env: Envelope<TestCommand>): Promise<Result<{ result: string }, BasicError>> {
+    observedPayload = env.payload;
+    return ok({ result: `Handled: ${env.payload.data}` });
   }
 }
 
-class RequestChangeMiddleware implements Middleware<TestCommand> {
-  async execute(command: TestCommand) {
-    command.data = 'Changed';
+class RequestChangeMiddleware implements Middleware<{ result: string }> {
+  order = 1;
+  async handle(env: Envelope<TestCommand>, next: () => Promise<Result<{ result: string }, BasicError>>): Promise<Result<{ result: string }, BasicError>> {
+    env.payload.data = 'Changed';
+    return next();
   }
 }
 
-describe('ServiceBus', () => {
+const TEST_COMMAND_TYPE = 'test.command';
+
+let observedPayload: TestCommand | undefined;
+
+describe('InMemoryServiceBus', () => {
   let container: Container;
-  let serviceBus: IServiceBus;
+  let serviceBus: ICommandBus;
 
   beforeEach(() => {
+    observedPayload = undefined;
     container = new Container();
-    container.bind<Container>(Container).toConstantValue(container);
-    container.bind<IServiceBus>(SERVICE_BUS_TOKENS.ServiceBus).to(ServiceBus);
-    container.bind<TestHandler>(TestCommand.name).to(TestHandler);
+    container.bind<Container>(TYPES.Container).toConstantValue(container);
     container
-      .bind<RequestChangeMiddleware>(SERVICE_BUS_TOKENS.Middleware)
-      .to(RequestChangeMiddleware);
+      .bind<ICommandBus>(COMMAND_BUS_TOKENS.CommandBus)
+      .to(InMemoryServiceBus);
+    container
+      .bind<Handler<TestCommand, { result: string }>>(TYPES.Handler)
+      .to(TestHandler)
+      .inSingletonScope()
+      .whenNamed(TEST_COMMAND_TYPE);
+    container.bind<RequestChangeMiddleware>(TYPES.Middleware).to(
+      RequestChangeMiddleware
+    );
 
-    serviceBus = container.get<IServiceBus>(SERVICE_BUS_TOKENS.ServiceBus);
+    serviceBus = container.get<ICommandBus>(COMMAND_BUS_TOKENS.CommandBus);
   });
 
-  test('should register and execute a handler', async () => {
-    const command = new TestCommand('123', 'testCaller', 'testData');
-    const result = await serviceBus.execute<TestCommand, { result: string }>(
-      command
+  test('invokes a registered handler', async () => {
+    const envelope: Envelope<TestCommand> = {
+      type: TEST_COMMAND_TYPE,
+      payload: { data: 'testData' },
+    };
+
+    const result = await serviceBus.invoke<TestCommand, { result: string }>(
+      envelope
     );
-    expect(result).toEqual({ result: 'Handled: testData' });
+
+    expect(result._tag).toBe('ok');
+    if (result._tag === 'ok') {
+      expect(result.value).toEqual({ result: 'Handled: Changed' });
+    }
   });
 
-  test('should throw an error if no handler is registered', async () => {
-    const command = new TestCommand('123', 'testCaller', 'testData');
-    container.unbind(TestCommand.name);
+  test('returns error when handler is missing', async () => {
+    container.unbindSync(TYPES.Handler);
+    const envelope: Envelope<TestCommand> = {
+      type: TEST_COMMAND_TYPE,
+      payload: { data: 'testData' },
+    };
 
-    await expect(serviceBus.execute(command)).rejects.toThrow(
-      'No handler registered for command: TestCommand'
+    const result = await serviceBus.invoke<TestCommand, { result: string }>(
+      envelope
     );
+
+    expect(result._tag).toBe('err');
+    if (result._tag === 'err') {
+      expect(result.error._type).toBe(NoHandlerErrorType);
+    }
   });
 
-  test('should execute middleware before handler', async () => {
-    const command = new TestCommand('123', 'testCaller', 'testData');
+  test('runs middleware chain before handler on dispatch', async () => {
+    const envelope: Envelope<TestCommand> = {
+      type: TEST_COMMAND_TYPE,
+      payload: { data: 'testData' },
+    };
 
-    serviceBus.use(
-      container.get<RequestChangeMiddleware>(SERVICE_BUS_TOKENS.Middleware)
-    );
-    const result = await serviceBus.execute<TestCommand, { result: string }>(
-      command
-    );
+    const ack = await serviceBus.dispatch(envelope);
 
-    expect(result).toEqual({ result: 'Handled: Changed' });
+    expect(ack._tag).toBe('ok');
+    expect(observedPayload?.data).toBe('Changed');
   });
 });

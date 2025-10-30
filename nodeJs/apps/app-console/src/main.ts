@@ -1,5 +1,6 @@
 import { Container } from "inversify";
 import { cleanConnections, setupConnections, setupContainer } from "./di";
+import { runConsole } from "./application/console";
 
 let container: Container | null = null;
 
@@ -9,6 +10,7 @@ async function main() {
     } = await setupContainer();
     container = containerInstance;
     await setupConnections(containerInstance);
+    await runConsole(containerInstance);
 }
 
 process.on('uncaughtException', async (error) => {

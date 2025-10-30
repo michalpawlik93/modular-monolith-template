@@ -1,6 +1,7 @@
 import {
   BaseCommand,
   BasicError,
+  Envelope,
   Handler,
   Pager,
   PagerResult,
@@ -13,18 +14,16 @@ import {
 import { Lookup } from '../../domain/models/lookup';
 import { inject, injectable } from 'inversify';
 
-export class GetPagedLookupsCommand implements BaseCommand {
-  constructor(
-    public userId: string,
-    public caller: string,
-    public pager: Pager
-  ) {}
+export interface GetPagedLookupsCommand extends BaseCommand {
+  pager: Pager;
 }
+
+export const GET_PAGED_LOOKUPS_COMMAND = 'lookup.getPaged';
 
 @injectable()
 export class GetPagedLookupsCommandHandler
   implements
-    Handler<GetPagedLookupsCommand, Result<PagerResult<Lookup>, BasicError>>
+    Handler<GetPagedLookupsCommand, PagerResult<Lookup>>
 {
   constructor(
     @inject(LOOKUP_REPOSITORY_KEY)
@@ -32,8 +31,8 @@ export class GetPagedLookupsCommandHandler
   ) {}
 
   async handle(
-    command: GetPagedLookupsCommand
+    env: Envelope<GetPagedLookupsCommand>
   ): Promise<Result<PagerResult<Lookup>, BasicError>> {
-    return await this.lookupRepository.getPaged(command.pager);
+    return await this.lookupRepository.getPaged(env.payload.pager);
   }
 }

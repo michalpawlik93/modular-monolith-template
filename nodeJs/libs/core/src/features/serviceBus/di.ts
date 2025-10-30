@@ -1,11 +1,19 @@
 import { Container } from 'inversify';
-import { IServiceBus, ServiceBus } from './serviceBus';
+import { ICommandBus, InMemoryServiceBus, TYPES } from './serviceBus';
 
-export const SERVICE_BUS_TOKENS = {
-  ServiceBus: Symbol.for('IServiceBus'),
-  Middleware: Symbol.for('Middleware'),
+export const COMMAND_BUS_TOKENS = {
+  CommandBus: Symbol.for('ICommandBus'),
 };
 
 export const registerServiceBus = (container: Container) => {
-  container.bind<IServiceBus>(SERVICE_BUS_TOKENS.ServiceBus).to(ServiceBus);
+  if (!container.isBound(TYPES.Container)) {
+    container.bind<Container>(TYPES.Container).toConstantValue(container);
+  }
+
+  if (!container.isBound(COMMAND_BUS_TOKENS.CommandBus)) {
+    container
+      .bind<ICommandBus>(COMMAND_BUS_TOKENS.CommandBus)
+      .to(InMemoryServiceBus)
+      .inSingletonScope();
+  }
 };

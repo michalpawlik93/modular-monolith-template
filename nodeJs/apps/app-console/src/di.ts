@@ -1,7 +1,14 @@
 
 import { Container } from 'inversify';
-import { MONGO_TOKENS, MongoConnection, registerMongoConnection, registerServiceBus} from '@app/core';
+import {
+  MONGO_TOKENS,
+  MongoConnection,
+  registerMongoConnection,
+  registerServiceBus,
+  TYPES,
+} from '@app/core';
 import { registerLookupsDomain } from '@app/lookup';
+import { ConsoleLoggingMiddleware } from './application/loggingMiddleware';
 
 export async function setupContainer(): Promise<{
   container: Container;
@@ -9,11 +16,15 @@ export async function setupContainer(): Promise<{
   const container = new Container();
   container.bind<Container>(Container).toConstantValue(container);
   registerServiceBus(container);
-  registerLookupsDomain(container);
+  container
+    .bind(TYPES.Middleware)
+    .to(ConsoleLoggingMiddleware)
+    .inSingletonScope();
   registerMongoConnection(
     container,
     'mongodb://localhost:27017/app'
   );
+  registerLookupsDomain(container);
   return { container };
 }
 
