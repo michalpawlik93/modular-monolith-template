@@ -6,6 +6,7 @@ import {
   Pager,
   PagerResult,
   Result,
+  isErr,
 } from '@app/core';
 import {
   ILookupRepository,
@@ -27,12 +28,19 @@ export class GetPagedLookupsCommandHandler
 {
   constructor(
     @inject(LOOKUP_REPOSITORY_KEY)
-    private lookupRepository: ILookupRepository
+    private lookupRepository: ILookupRepository,
   ) {}
 
   async handle(
     env: Envelope<GetPagedLookupsCommand>
   ): Promise<Result<PagerResult<Lookup>, BasicError>> {
-    return await this.lookupRepository.getPaged(env.payload.pager);
+    const { pager } = env.payload;
+    const result = await this.lookupRepository.getPaged(pager);
+
+    if (isErr(result)) {
+      return result;
+    }
+
+    return result;
   }
 }

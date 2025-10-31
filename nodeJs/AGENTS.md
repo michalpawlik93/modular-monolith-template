@@ -1,17 +1,17 @@
 # AI Development Guidelines
 
-This folder contains development guidelines split into categorized files for better organization and maintainability.
+This directory provides a structured set of development standards, organized into categorized files for easier navigation and long-term maintenance.
 
-## Required Guidelines
-Following documents define mandatory standards for all new or changed code:
-[General AI agent approach](./.ai/general/ai-agent.md)
-[Repository description](./.ai/repository.md)
+## Mandatory Guidelines
+The following documents define the **required standards** that must be followed for all new code implementations or modifications:  
+[Repository Overview](./.ai/repository.md)
 
-**ALWAYS** read these documents and follow by their links for understanding user request.
+**Always** review these documents and any linked references to ensure full understanding of user requirements.
 
-## Usage
-Before performing ANY automated or manual change you MUST read (or re-skim if already familiar) the required guidelines above. When conflicts arise between code comments and these documents, treat the documents as the source of truth and create a follow-up ticket to reconcile discrepancies.
+## Usage Instructions
+Before performing **any** manual or automated modification, make sure to read (or re-read if already familiar) the mandatory guidelines listed above.  
 
-## Per-Project Agent Documentation
-**ALWAYS** read AGENTS.md file of the project before making changes. It may contain project-specific overrides or 
-additions to the core guidelines.
+## Project-Specific Agent Documentation
+**Always** check the project’s `AGENTS.md` file before making changes. It may contain custom rules or extensions that override the core AI development standards.
+
+---

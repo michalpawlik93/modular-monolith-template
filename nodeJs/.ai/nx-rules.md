@@ -44,14 +44,6 @@ apps/
 **Always use Nx for running workspace commands** - do not use scripts from package.json
 
 **Command Patterns:**
-- Testing: `npx nx test [project-type].[scope].[project-name]`
-- Building: `npx nx build [project-type].[scope].[project-name]`
-- Linting: `npx nx lint [project-type].[scope].[project-name]`
-
-### Linting
-- All projects must contain lint target
-- All code should be linted and fixed
-- For running linting always use Nx CLI
-
-## Project-Specific Import Rules
-- **Disallow cycles** (`import/no-cycle`)
+- Testing: `npx nx test [app-or-lib-name]`
+- Building: `npx nx build [app-or-lib-name]`
+- Linting: `npx nx lint [app-or-lib-name]`

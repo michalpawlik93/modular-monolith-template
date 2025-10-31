@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { Container } from "inversify";
 import { cleanConnections, setupConnections, setupContainer } from "./di";
 import { runConsole } from "./application/console";
@@ -7,10 +8,13 @@ let container: Container | null = null;
 async function main() {
     const {
       container: containerInstance,
+      runWithContext,
     } = await setupContainer();
     container = containerInstance;
     await setupConnections(containerInstance);
-    await runConsole(containerInstance);
+    await runWithContext(async () => {
+      await runConsole(containerInstance);
+    });
 }
 
 process.on('uncaughtException', async (error) => {

@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { inject, injectable } from 'inversify';
-import { Handler, Envelope, TYPES, BaseCommand, isErr } from '@app/core';
+import { Handler, Envelope, BaseCommand, isErr } from '@app/core';
 import { Result, BasicError, ok, basicErr } from '@app/core';
 import { ILookupRepository, LOOKUP_REPOSITORY_KEY } from '../../infrastructure/mongo/lookupRepository';
 import { Lookup } from '../../domain';
@@ -20,7 +20,7 @@ export class CreateLookupCommandHandler
 {
 	constructor(
 		@inject(LOOKUP_REPOSITORY_KEY)
-		private readonly repo: ILookupRepository
+		private readonly repo: ILookupRepository,
 	) {}
 
 	async handle(
@@ -36,13 +36,9 @@ export class CreateLookupCommandHandler
 			type,
 			shortName,
 		}); 
-		return isErr(createResult) ? createResult : ok({ id });
+		if (isErr(createResult)) {
+			return createResult;
+		}
+		return ok({ id });
 	}
 }
-
-export const registerCreateLookupHandler = (container: any) => {
-	container
-		.bind(TYPES.Handler)
-		.to(CreateLookupCommandHandler)
-		.whenNamed(CREATE_LOOKUP_COMMAND_TYPE);
-};

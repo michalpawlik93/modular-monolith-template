@@ -1,4 +1,6 @@
+import 'reflect-metadata';
 import { MongoConnection } from '../mongoConnection';
+import type { MongoConfig } from '../types';
 import { isOk, isErr } from '../../../utils/result';
 
 // Mock MongoDB
@@ -20,9 +22,10 @@ describe('MongoConnection', () => {
   let mongoConnection: MongoConnection;
 
   beforeEach(() => {
-    mongoConnection = new MongoConnection(
-      'mongodb://localhost:27017/amadeo-test'
-    );
+    const mongoConfig: MongoConfig = {
+      uri: 'mongodb://localhost:27017/amadeo-test',
+    };
+    mongoConnection = new MongoConnection(mongoConfig);
   });
 
   afterEach(async () => {
@@ -133,7 +136,7 @@ describe('MongoConnection', () => {
 describe('MongoConnection constructor', () => {
   it('should create connection with default URI', () => {
     // Act
-    const connection = new MongoConnection('mongodb://localhost:27017/test');
+    const connection = new MongoConnection({ uri: 'mongodb://localhost:27017/test' });
 
     // Assert
     expect(connection).toBeInstanceOf(MongoConnection);
@@ -144,7 +147,7 @@ describe('MongoConnection constructor', () => {
     const customUri = 'mongodb://localhost:27017/custom-test';
 
     // Act
-    const connection = new MongoConnection(customUri);
+    const connection = new MongoConnection({ uri: customUri });
 
     // Assert
     expect(connection).toBeInstanceOf(MongoConnection);

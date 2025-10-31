@@ -47,3 +47,6 @@ nodeJs/.nx/workspace-data
 #secrets certs
 *.crt
 *.key
+
+# logs
+logs

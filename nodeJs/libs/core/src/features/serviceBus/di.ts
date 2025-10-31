@@ -1,5 +1,6 @@
 import { Container } from 'inversify';
 import { ICommandBus, InMemoryServiceBus, TYPES } from './serviceBus';
+import { ServiceBusLoggingMiddleware } from './serviceBusLoggingMiddleware';
 
 export const COMMAND_BUS_TOKENS = {
   CommandBus: Symbol.for('ICommandBus'),
@@ -16,4 +17,8 @@ export const registerServiceBus = (container: Container) => {
       .to(InMemoryServiceBus)
       .inSingletonScope();
   }
+  container
+    .bind(TYPES.Middleware)
+    .to(ServiceBusLoggingMiddleware)
+    .inSingletonScope();
 };

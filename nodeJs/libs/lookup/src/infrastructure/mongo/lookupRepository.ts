@@ -12,11 +12,10 @@ export interface LookupDao {
   shortName?: string;
 }
 
-export interface ILookupRepository
-  extends Pick<
-    IBaseRepository<Lookup, LookupDao>,
-    'createMany' | 'getPaged' | 'create' | 'update'
-  > {}
+export type ILookupRepository = Pick<
+  IBaseRepository<Lookup, LookupDao>,
+  'createMany' | 'getPaged' | 'create' | 'update'
+>;
 
 export const LOOKUP_REPOSITORY_KEY = Symbol.for('ILookupRepository');
 
