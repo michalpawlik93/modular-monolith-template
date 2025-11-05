@@ -44,9 +44,12 @@ export class GrpcCommandBusServer {
         callback: grpc.sendUnaryData<InvokeRes>,
       ) => {
         try {
+          const payload_json = call.request.payload_json || '';
+          const parsedPayload = safeParse(payload_json);
+          
           const env: CoreEnvelope = {
             type: call.request.type,
-            payload: safeParse(call.request.payload_json),
+            payload: parsedPayload,
             meta: call.request.meta ?? {},
           };
 
@@ -102,7 +105,7 @@ export class GrpcCommandBusServer {
 }
 
 function safeParse(json: string): Record<string, unknown> {
-  if (!json) {
+  if (!json || json.trim() === '') {
     return {};
   }
   try {

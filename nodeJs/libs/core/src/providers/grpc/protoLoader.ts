@@ -32,7 +32,7 @@ export function loadBusProto(): BusPackage {
   );
 
   const pkgDef = protoLoader.loadSync(protoPath, {
-    keepCase: false,
+    keepCase: true,
     longs: String,
     enums: String,
     defaults: true,
