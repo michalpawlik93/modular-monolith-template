@@ -31,6 +31,8 @@
   },
   "projects": {
     "app-console": "apps/app-console",
-    "lookup": "libs/lookup"
+    "core-svc": "apps/core-svc",
+    "lookup": "libs/lookup",
+    "core": "libs/core"
   }
 }

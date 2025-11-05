@@ -1,15 +1,10 @@
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { config as loadEnv } from 'dotenv';
-import type {
-  LoggerConfig,
-  LogLevel,
-  MongoConfig,
-  GrpcRoutingConfig,
-} from '@app/core';
+import type { LoggerConfig, LogLevel, MongoConfig } from '@app/core';
 
 const environment = (process.env.NODE_ENV ?? 'development').toLowerCase();
-const envDirectory = path.resolve(process.cwd(), 'apps', 'app-console', 'config');
+const envDirectory = path.resolve(process.cwd(), 'apps', 'core-svc', 'config');
 const envFilePath = path.join(envDirectory, `env.${environment}`);
 
 if (existsSync(envFilePath)) {
@@ -35,7 +30,7 @@ export const resolveLogLevel = (value?: string | null): LogLevel => {
 
 const resolveLogFilePath = (value?: string | null): string => {
   if (!value) {
-    return path.join(process.cwd(), 'logs', 'app-console.log');
+    return path.join(process.cwd(), 'logs', 'core-svc.log');
   }
 
   if (path.isAbsolute(value)) {
@@ -52,26 +47,10 @@ export const buildLoggerConfig = (): LoggerConfig => ({
 });
 
 export const buildMongoConfig = (): MongoConfig => ({
-  uri: process.env.MONGO_URI ?? 'mongodb://localhost:27017/app',
+  uri: process.env.MONGO_URI ?? 'mongodb://localhost:27017/core',
 });
 
 export const getEnvironment = (): string => environment;
 
-const resolveTimeout = (value?: string | null): number | undefined => {
-  if (!value) {
-    return 3000;
-  }
-
-  const parsed = Number.parseInt(value, 10);
-  if (Number.isFinite(parsed) && parsed > 0) {
-    return parsed;
-  }
-  return 3000;
-};
-
-export const buildGrpcRoutingConfig = (): GrpcRoutingConfig => ({
-  modules: {
-    Core: process.env.GRPC_CORE_ENDPOINT ?? 'localhost:50051',
-  },
-  defaultTimeoutMs: resolveTimeout(process.env.GRPC_DEFAULT_TIMEOUT_MS),
-});
+export const getGrpcServerAddress = (): string =>
+  process.env.GRPC_SERVER_ADDRESS ?? '0.0.0.0:50051';

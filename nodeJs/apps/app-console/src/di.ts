@@ -8,9 +8,14 @@ import {
   registerServiceBus,
   RequestContext,
   LOGGING_TYPES,
+  type GrpcRoutingConfig,
 } from '@app/core';
 import { registerLookupsDomain } from '@app/lookup';
-import { buildLoggerConfig, buildMongoConfig } from './config';
+import {
+  buildLoggerConfig,
+  buildMongoConfig,
+  buildGrpcRoutingConfig,
+} from './config';
 
 export async function setupContainer(): Promise<{
   container: Container;
@@ -19,6 +24,8 @@ export async function setupContainer(): Promise<{
   const container = new Container();
   container.bind<Container>(Container).toConstantValue(container);
   registerLogging(container, buildLoggerConfig());
+  const grpcConfig = buildGrpcRoutingConfig();
+  container.bind<GrpcRoutingConfig>('GrpcRoutingConfig').toConstantValue(grpcConfig);
   registerServiceBus(container);
   registerMongoConnection(container, buildMongoConfig());
   registerLookupsDomain(container);

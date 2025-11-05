@@ -11,8 +11,10 @@ const mockPinoLogger = {
 };
 
 jest.mock('pino', () => {
-  const mockPino = jest.fn(() => mockPinoLogger);
-  (mockPino as any).transport = jest.fn(() => ({}));
+  const mockTransport = jest.fn(() => ({}));
+  const mockPino = Object.assign(jest.fn(() => mockPinoLogger), {
+    transport: mockTransport,
+  });
 
   return {
     __esModule: true,

@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "outDir": "../../dist/out-tsc/apps/app-console",
+    "outDir": "../../dist/out-tsc/apps/core-svc",
     "module": "commonjs",
     "types": ["node", "jest"]
   },

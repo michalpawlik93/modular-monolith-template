@@ -30,7 +30,7 @@ describe('MongoConnection', () => {
 
   afterEach(async () => {
     if (mongoConnection.isConnected()) {
-      await mongoConnection.close(() => {});
+      await mongoConnection.close(() => undefined);
     }
     jest.clearAllMocks();
   });
@@ -40,7 +40,7 @@ describe('MongoConnection', () => {
     mockConnect.mockResolvedValue(undefined);
 
     // Act
-    const result = await mongoConnection.connect(() => {});
+    const result = await mongoConnection.connect(() => undefined);
 
     // Assert
     expect(isOk(result)).toBeTruthy();
@@ -56,11 +56,11 @@ describe('MongoConnection', () => {
     mockConnect.mockResolvedValue(undefined);
     mockClose.mockResolvedValue(undefined);
 
-    const connectResult = await mongoConnection.connect(() => {});
+    const connectResult = await mongoConnection.connect(() => undefined);
     expect(isOk(connectResult)).toBeTruthy();
 
     // Act
-    const closeResult = await mongoConnection.close(() => {});
+    const closeResult = await mongoConnection.close(() => undefined);
 
     // Assert
     expect(isOk(closeResult)).toBeTruthy();
@@ -79,7 +79,7 @@ describe('MongoConnection', () => {
     // Arrange
     mockConnect.mockResolvedValue(undefined);
 
-    const connectResult = await mongoConnection.connect(() => {});
+    const connectResult = await mongoConnection.connect(() => undefined);
     expect(isOk(connectResult)).toBeTruthy();
 
     // Act
@@ -115,7 +115,7 @@ describe('MongoConnection', () => {
     mockClose.mockRejectedValue(new Error('Disconnect failed'));
     const onFailure = jest.fn();
 
-    const connectResult = await mongoConnection.connect(() => {});
+    const connectResult = await mongoConnection.connect(() => undefined);
     expect(isOk(connectResult)).toBeTruthy();
 
     // Act

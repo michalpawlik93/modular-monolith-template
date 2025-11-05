@@ -6,6 +6,7 @@ import {
   IndexDescription,
   UpdateFilter,
   ClientSession,
+  MongoClient,
 } from 'mongodb';
 import {
   Result,
@@ -31,7 +32,7 @@ export interface IBaseRepository<
   getPaged(
     pager: Pager,
     filter?: GetFilter<TDao>,
-    additionalFilters?: Record<string, any>,
+    additionalFilters?: Record<string, unknown>,
     sortOptions?: Record<string, 1 | -1>
   ): Promise<Result<PagerResult<TDomain>, BasicError>>;
   getFiltered(filter: Filter<TDao>): Promise<Result<TDomain[], BasicError>>;
@@ -50,6 +51,11 @@ export interface IBaseRepository<
 type BaseDao = { _id: string };
 type BaseDomain = { id: string };
 export type GetFilter<T> = { propertyName: keyof T; propertyValue: string };
+
+const getErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
+
+type DbWithClient = Db & { client?: MongoClient };
 
 export const useBaseRepository = <
   TDomain extends BaseDomain,
@@ -79,9 +85,9 @@ export const useBaseRepository = <
           await db.collection<TDao>(collectionName).insertOne(daoEntity);
           return ok(domainEntity, ['Entity created successfully']);
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         return notFoundErr(
-          `Failed to create/update entity: ${error.message || error}`
+          `Failed to create/update entity: ${getErrorMessage(error)}`
         );
       }
     },
@@ -135,9 +141,9 @@ export const useBaseRepository = <
         }
 
         return ok(results, messages);
-      } catch (error: any) {
+      } catch (error: unknown) {
         return basicErr(
-          `Failed to create/update entities: ${error.message || error}`
+          `Failed to create/update entities: ${getErrorMessage(error)}`
         );
       }
     },
@@ -188,15 +194,15 @@ export const useBaseRepository = <
         }
         const indexName = await collection.createIndex(indexSpec);
         return ok(`Index created successfully on field: ${indexName}`);
-      } catch (err) {
-        return notFoundErr(`Failed to create index: ${err}`);
+      } catch (error: unknown) {
+        return notFoundErr(`Failed to create index: ${getErrorMessage(error)}`);
       }
     },
 
     async getPaged(
       pager: Pager,
       getFilter?: GetFilter<TDao>,
-      additionalFilters?: Record<string, any>,
+      additionalFilters?: Record<string, unknown>,
       sortOptions?: Record<string, 1 | -1>
     ): Promise<Result<PagerResult<TDomain>, BasicError>> {
       const { pageSize, cursor } = pager;
@@ -236,8 +242,8 @@ export const useBaseRepository = <
           data: paginatedResults.map(toDomain),
           cursor: nextCursor,
         });
-      } catch (err) {
-        return notFoundErr(`Pagination failed: ${err}`);
+      } catch (error: unknown) {
+        return notFoundErr(`Pagination failed: ${getErrorMessage(error)}`);
       }
     },
 
@@ -305,18 +311,28 @@ export const useBaseRepository = <
     async executeTransaction<T>(
       operation: (session: ClientSession) => Promise<T>
     ): Promise<Result<T, BasicError>> {
-      const session = (db as any).client.startSession();
+      const client = (db as DbWithClient).client;
+
+      if (!client) {
+        return basicErr('MongoDB client session is not available');
+      }
+
+      const session = client.startSession();
 
       try {
-        let result: T;
+        let operationResult: T | undefined;
 
         await session.withTransaction(async () => {
-          result = await operation(session);
+          operationResult = await operation(session);
         });
 
-        return ok(result!);
-      } catch (error) {
-        return notFoundErr(`Transaction failed: ${error}`);
+        if (typeof operationResult === 'undefined') {
+          return basicErr('Transaction operation did not return a result');
+        }
+
+        return ok(operationResult);
+      } catch (error: unknown) {
+        return notFoundErr(`Transaction failed: ${getErrorMessage(error)}`);
       } finally {
         await session.endSession();
       }

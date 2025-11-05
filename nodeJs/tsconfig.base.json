@@ -17,6 +17,7 @@
     "baseUrl": ".",
     "paths": {
       "@app/app-console": ["apps/app-console/src/main.ts"],
+      "@app/core-svc": ["apps/core-svc/src/main.ts"],
       "@app/lookup": ["libs/lookup/src/index.ts"],
       "@app/core": ["libs/core/src/index.ts"]
     }

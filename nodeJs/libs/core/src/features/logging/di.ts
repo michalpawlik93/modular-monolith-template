@@ -5,7 +5,7 @@ import { LoggerFactory } from "./loggerFactory";
 import { RequestContext } from "./requestContext";
 import { TYPES } from "./types";
 
-const bindOrRebind = <T>(container: Container, serviceIdentifier: symbol, binder: () => void) => {
+const bindOrRebind = (container: Container, serviceIdentifier: symbol, binder: () => void) => {
   if (container.isBound(serviceIdentifier)) {
     container.unbind(serviceIdentifier);
   }
@@ -28,7 +28,10 @@ export const registerLogging = (container: Container, config: LoggerConfig) => {
   bindOrRebind(container, TYPES.BaseLogger, () => {
     container
       .bind<ILogger>(TYPES.BaseLogger)
-      .toDynamicValue((ctx) =>  (ctx as unknown as { container: Container }).container.get<LoggerFactory>(TYPES.LoggerFactory).getBase())
+      .toDynamicValue(() => {
+        const lf = container.get(TYPES.LoggerFactory) as LoggerFactory;
+        return lf.getBase();
+      })
       .inSingletonScope();
   });
 };

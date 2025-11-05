@@ -1,14 +1,13 @@
 import 'reflect-metadata';
-import { injectable, inject, Container } from 'inversify';
+import { injectable, Container } from 'inversify';
 import {
   Result,
   BasicError,
   err,
-  empty,
   basicErr,
 } from '../../utils/result';
 
-export interface BaseCommand {}
+export type BaseCommand = Record<string, unknown>;
 
 export interface Metadata {
   correlationId?: string;
@@ -35,9 +34,6 @@ export interface Middleware<R = unknown> {
 }
 
 export interface ICommandBus {
-  dispatch<T extends BaseCommand>(
-    env: Envelope<T>
-  ): Promise<Result<null, BasicError>>;
   invoke<T extends BaseCommand, R = unknown>(
     env: Envelope<T>,
     opts?: { timeoutMs?: number }
@@ -77,24 +73,8 @@ const safe = async <R>(
 };
 
 @injectable()
-export class InMemoryServiceBus implements ICommandBus {
-  constructor(@inject(TYPES.Container) private readonly container: Container) {}
-
-  async dispatch<T extends BaseCommand>(
-    env: Envelope<T>
-  ): Promise<Result<null, BasicError>> {
-    const chain = this.resolveMiddlewares<null>();
-    return safe(async () =>
-      this.runPipeline(chain, env, async () => {
-        const handled = await this.invokeHandler<T, unknown>(env);
-        if (handled._tag === 'err') {
-          return handled as Result<null, BasicError>;
-        }
-        const messages = handled.messages;
-        return empty(messages);
-      })
-    );
-  }
+export abstract class BaseServiceBus implements ICommandBus {
+  constructor(protected readonly container: Container) {}
 
   async invoke<T extends BaseCommand, R = unknown>(
     env: Envelope<T>,
@@ -110,7 +90,7 @@ export class InMemoryServiceBus implements ICommandBus {
     );
   }
 
-  private resolveMiddlewares<R>(): Middleware<R>[] {
+  protected resolveMiddlewares<R>(): Middleware<R>[] {
     if (!this.container.isBound(TYPES.Middleware)) {
       return [];
     }
@@ -118,7 +98,7 @@ export class InMemoryServiceBus implements ICommandBus {
     return list.sort((a, b) => (a.order ?? 100) - (b.order ?? 100));
   }
 
-  private async runPipeline<R>(
+  protected async runPipeline<R>(
     middlewares: Middleware<R>[],
     env: Envelope,
     terminal: () => Promise<Result<R, BasicError>>
@@ -138,20 +118,11 @@ export class InMemoryServiceBus implements ICommandBus {
     return execute(0);
   }
 
-  private async invokeHandler<T extends BaseCommand, R>(
+  protected abstract invokeHandler<T extends BaseCommand, R>(
     env: Envelope<T>
-  ): Promise<Result<R, BasicError>> {
-    if (!this.container.isBound(TYPES.Handler, { name: env.type })) {
-      return noHandlerErr(env.type);
-    }
-    const handler = this.container.get<Handler<T, R>>(
-      TYPES.Handler,
-      { name: env.type }
-    );
-    return handler.handle(env);
-  }
+  ): Promise<Result<R, BasicError>>;
 
-  private async withTimeout<R>(
+  protected async withTimeout<R>(
     type: string,
     ms: number,
     op: () => Promise<Result<R, BasicError>>

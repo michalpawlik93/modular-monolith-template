@@ -33,7 +33,7 @@ export const MockPageRequestByTime = (): PageRequestByTime => ({
 
 export type DeepRequired<T> = {
   [P in keyof T]-?: T[P] extends object
-    ? T[P] extends (...args: any[]) => any
+    ? T[P] extends (...args: unknown[]) => unknown
       ? T[P]
       : DeepRequired<T[P]>
     : T[P];

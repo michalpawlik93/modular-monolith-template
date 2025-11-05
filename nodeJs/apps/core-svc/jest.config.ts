@@ -1,6 +1,6 @@
 /* eslint-disable */
 export default {
-  displayName: 'app-console',
+  displayName: 'core-svc',
   preset: '../../jest.preset.js',
   testEnvironment: 'node',
   transform: {
@@ -8,8 +8,8 @@ export default {
   },
   moduleNameMapper: {
     '^@app/lookup$': '<rootDir>/../../libs/lookup/src/index.ts',
-    '^@app/app-console$': '<rootDir>/src/main.ts'
+    '^@app/core-svc$': '<rootDir>/src/main.ts'
   },
   moduleFileExtensions: ['ts', 'js'],
-  coverageDirectory: '../../coverage/apps/app-console'
+  coverageDirectory: '../../coverage/apps/core-svc'
 };

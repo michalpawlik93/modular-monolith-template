@@ -1,0 +1,28 @@
+syntax = "proto3";
+package bus.v1;
+
+message Envelope {
+  string type = 1;                       // np. "Orders.Create"
+  string payload_json = 2;               // JSON.stringify(env.payload)
+  map<string, string> meta = 3;          // correlationId, userId, source...
+}
+
+message Ok {
+  string payload_json = 1;               // JSON.stringify(reply)
+}
+
+message BasicError {
+  string _type = 1;                      // np. "ValidationError"
+  string message = 2;
+}
+
+message Result {
+  oneof kind {
+    Ok ok = 1;
+    BasicError err = 2;
+  }
+}
+
+service CommandBus {
+  rpc Invoke(Envelope) returns (Result);
+}

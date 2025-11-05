@@ -12,17 +12,12 @@ import {
   CreateLookupCommand,
   CreateLookupResponse,
 } from '@app/lookup';
-import { dispatchCreateLookup } from './commands/dispatchCreateLookup';
 import { invokeCreateLookup } from './commands/invokeCreateLookup';
-
-const BASE_LOOKUP: Omit<CreateLookupCommand, 'id'> = {
-  value: 'Console sample lookup',
-  type: 'console',
-  shortName: 'CONSOLE',
-};
+import { invokeCreateLookupGrpc } from './commands/invokeCreateLookupGrpc';
 
 class ConsoleApp {
   private readonly bus: ICommandBus;
+  private readonly rabbitEnabled: boolean;
 
   constructor(private readonly container: Container) {
     this.bus = container.get<ICommandBus>(COMMAND_BUS_TOKENS.CommandBus);
@@ -34,18 +29,18 @@ class ConsoleApp {
 
     while (!exit) {
       console.log('\n=== Lookup Console ===');
-      console.log('1. Dispatch create lookup');
-      console.log('2. Invoke create lookup');
+      console.log('1. Invoke create lookup');
+      console.log('2. Invoke create lookup (gRPC)');
       console.log('0. Exit');
 
       const choice = (await rl.question('Select option: ')).trim();
 
       switch (choice) {
         case '1':
-          await this.handleDispatch();
+          await this.handleInvoke();
           break;
         case '2':
-          await this.handleInvoke();
+          await this.handleInvokeGrpc();
           break;
         case '0':
           exit = true;
@@ -61,18 +56,11 @@ class ConsoleApp {
   private buildPayload(): CreateLookupCommand {
     return {
       id: `console-${Date.now()}`,
-      ...BASE_LOOKUP,
+      value: 'Console sample lookup',
+      type: 'console',
+      shortName: 'CONSOLE',
     };
   }
-
-  private async handleDispatch(): Promise<void> {
-    const payload = this.buildPayload();
-    console.log('Dispatching CreateLookupCommand with payload:', payload);
-
-    const result = await dispatchCreateLookup(this.bus, payload);
-    this.logResult('Dispatch', result);
-  }
-
   private async handleInvoke(): Promise<void> {
     const payload = this.buildPayload();
     console.log('Invoking CreateLookupCommand with payload:', payload);
@@ -81,17 +69,12 @@ class ConsoleApp {
     this.logInvokeResult(result);
   }
 
-  private logResult(
-    label: string,
-    result: Result<null, BasicError>
-  ): void {
-    if (isOk(result)) {
-      console.log(`${label} succeeded.`);
-    } else {
-      console.error(
-        `${label} failed: [${result.error._type}] ${result.error.message}`
-      );
-    }
+  private async handleInvokeGrpc(): Promise<void> {
+    const payload = this.buildPayload();
+    console.log('Invoking CreateLookupCommand (gRPC) with payload:', payload);
+
+    const result = await invokeCreateLookupGrpc(this.container, payload);
+    this.logInvokeResult(result);
   }
 
   private logInvokeResult(

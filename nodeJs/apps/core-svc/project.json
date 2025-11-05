@@ -1,20 +1,20 @@
 {
-  "name": "app-console",
+  "name": "core-svc",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "projectType": "application",
-  "sourceRoot": "apps/app-console/src",
+  "sourceRoot": "apps/core-svc/src",
   "targets": {
     "lint": {
       "executor": "@nx/eslint:lint",
       "options": {
-        "lintFilePatterns": ["apps/app-console/**/*.ts"]
+        "lintFilePatterns": ["apps/core-svc/**/*.ts"]
       }
     },
     "test": {
       "executor": "@nx/jest:jest",
-      "outputs": ["{workspaceRoot}/coverage/apps/app-console"],
+      "outputs": ["{workspaceRoot}/coverage/apps/core-svc"],
       "options": {
-        "jestConfig": "apps/app-console/jest.config.ts",
+        "jestConfig": "apps/core-svc/jest.config.ts",
         "passWithNoTests": false
       }
     },
@@ -24,16 +24,16 @@
       "defaultConfiguration": "production",
       "options": {
         "platform": "node",
-        "outputPath": "dist/apps/app-console",
+        "outputPath": "dist/apps/core-svc",
         "format": ["cjs"],
         "bundle": true,
-        "main": "apps/app-console/src/main.ts",
-        "tsConfig": "apps/app-console/tsconfig.app.json",
+        "main": "apps/core-svc/src/main.ts",
+        "tsConfig": "apps/core-svc/tsconfig.app.json",
         "assets": [
-          "apps/app-console/src/assets",
-          "apps/app-console/.env.*",
+          "apps/core-svc/src/assets",
+          "apps/core-svc/.env.*",
           {
-            "input": "apps/app-console/staticFiles",
+            "input": "apps/core-svc/staticFiles",
             "glob": "**/*",
             "output": "staticFiles"
           },
@@ -84,16 +84,16 @@
       "executor": "@nx/js:node",
       "defaultConfiguration": "development",
       "options": {
-        "buildTarget": "app-console:build",
+        "buildTarget": "core-svc:build",
         "runtimeArgs": ["--inspect=9229"],
         "watch": true
       },
       "configurations": {
         "development": {
-          "buildTarget": "app-console:build:development"
+          "buildTarget": "core-svc:build:development"
         },
         "production": {
-          "buildTarget": "app-console:build:production"
+          "buildTarget": "core-svc:build:production"
         }
       }
     }

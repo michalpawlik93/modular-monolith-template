@@ -55,7 +55,7 @@ describe('dateTimeUtils', () => {
       const invalidValues = [null, undefined, 123, new Date(), {}, []];
 
       invalidValues.forEach((value) => {
-        const result = isoDateStringSchema.safeParse(value as any);
+        const result = isoDateStringSchema.safeParse(value);
         expect(result.success).toBe(false);
       });
     });
@@ -169,7 +169,7 @@ describe('dateTimeUtils', () => {
       ];
 
       invalidInputs.forEach((input) => {
-        const result = formatUTCDateToISOString(input as any);
+        const result = formatUTCDateToISOString(input as unknown as Date);
         expect(isErr(result)).toBe(true);
         if (isErr(result)) {
           expect(result.error.message).toBe('Invalid Date object');

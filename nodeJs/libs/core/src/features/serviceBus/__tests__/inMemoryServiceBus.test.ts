@@ -1,7 +1,6 @@
 import 'reflect-metadata';
 import { Container } from 'inversify';
 import {
-  InMemoryServiceBus,
   ICommandBus,
   BaseCommand,
   Handler,
@@ -10,6 +9,7 @@ import {
   TYPES,
   NoHandlerErrorType,
 } from '../serviceBus';
+import { InMemoryServiceBus } from '../inMemoryServiceBus';
 import { COMMAND_BUS_TOKENS } from '../di';
 import { Result, BasicError, ok } from '../../../utils/result';
 
@@ -93,15 +93,20 @@ describe('InMemoryServiceBus', () => {
     }
   });
 
-  test('runs middleware chain before handler on dispatch', async () => {
+  test('runs middleware chain before handler on invoke', async () => {
     const envelope: Envelope<TestCommand> = {
       type: TEST_COMMAND_TYPE,
       payload: { data: 'testData' },
     };
 
-    const ack = await serviceBus.dispatch(envelope);
+    const result = await serviceBus.invoke<TestCommand, { result: string }>(
+      envelope
+    );
 
-    expect(ack._tag).toBe('ok');
+    expect(result._tag).toBe('ok');
     expect(observedPayload?.data).toBe('Changed');
+    if (result._tag === 'ok') {
+      expect(result.value).toEqual({ result: 'Handled: Changed' });
+    }
   });
 });
