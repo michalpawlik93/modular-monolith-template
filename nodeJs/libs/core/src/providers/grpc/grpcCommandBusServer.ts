@@ -9,7 +9,7 @@ import {
 } from '../../features/serviceBus/serviceBus';
 import {
   BasicError,
-  Result as CoreResult,
+  Result,
   basicErr,
   isOk,
 } from '../../utils/result';
@@ -27,8 +27,7 @@ type InvokeRes =
 @injectable()
 export class GrpcCommandBusServer {
   private server: grpc.Server | null = null;
-
-  constructor(@inject(TYPES.Container) private readonly container: Container) {}
+  constructor(@inject(Container) protected readonly container: Container) {}
 
   async start(address: string): Promise<void> {
     if (this.server) {
@@ -117,7 +116,7 @@ function safeParse(json: string): Record<string, unknown> {
 }
 
 function toGrpcResult(
-  res: CoreResult<unknown, BasicError>,
+  res: Result<unknown, BasicError>,
 ): InvokeRes {
   if (isOk(res)) {
     const payload_json = JSON.stringify(res.value ?? null);

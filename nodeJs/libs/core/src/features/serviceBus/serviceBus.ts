@@ -41,7 +41,6 @@ export interface ICommandBus {
 }
 
 export const TYPES = {
-  Container: Symbol('Container'),
   Handler: Symbol('Handler'),
   Middleware: Symbol('Middleware'),
 };

@@ -6,7 +6,6 @@ import {
   BaseServiceBus,
   Envelope,
   BaseCommand,
-  TYPES,
 } from './serviceBus';
 import {
   Result,
@@ -47,7 +46,7 @@ export class GrpcServiceBus extends BaseServiceBus {
 
   constructor(
     @inject('GrpcRoutingConfig') private readonly cfg: GrpcRoutingConfig,
-    @inject(TYPES.Container) container: Container,
+    @inject(Container) protected readonly container: Container,
   ) {
     super(container);
   }

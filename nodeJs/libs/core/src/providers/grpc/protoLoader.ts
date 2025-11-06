@@ -19,13 +19,8 @@ export interface BusPackage {
   };
 }
 
-let cached: BusPackage | null = null;
 
 export function loadBusProto(): BusPackage {
-  if (cached) {
-    return cached;
-  }
-
   const protoPath = path.resolve(
     __dirname,
     './proto/bus/v1/command_bus.proto',
@@ -39,7 +34,5 @@ export function loadBusProto(): BusPackage {
     oneofs: true,
   });
 
-  const loaded = grpc.loadPackageDefinition(pkgDef) as unknown as BusPackage;
-  cached = loaded;
-  return loaded;
+  return grpc.loadPackageDefinition(pkgDef) as unknown as BusPackage;
 }

@@ -52,26 +52,22 @@ export const buildLoggerConfig = (): LoggerConfig => ({
 });
 
 export const buildMongoConfig = (): MongoConfig => ({
-  uri: process.env.MONGO_URI ?? 'mongodb://localhost:27017/app',
+  uri: process.env.MONGO_URI,
 });
 
 export const getEnvironment = (): string => environment;
 
 const resolveTimeout = (value?: string | null): number | undefined => {
-  if (!value) {
-    return 3000;
-  }
-
   const parsed = Number.parseInt(value, 10);
   if (Number.isFinite(parsed) && parsed > 0) {
     return parsed;
   }
-  return 3000;
+  return undefined;
 };
 
 export const buildGrpcRoutingConfig = (): GrpcRoutingConfig => ({
   modules: {
-    Core: process.env.GRPC_CORE_ENDPOINT ?? 'localhost:50051',
+    Core: process.env.GRPC_CORE_ENDPOINT,
   },
   defaultTimeoutMs: resolveTimeout(process.env.GRPC_DEFAULT_TIMEOUT_MS),
 });

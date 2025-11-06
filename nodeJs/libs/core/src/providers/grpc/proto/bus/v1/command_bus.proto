@@ -2,17 +2,17 @@ syntax = "proto3";
 package bus.v1;
 
 message Envelope {
-  string type = 1;                       // np. "Orders.Create"
-  string payload_json = 2;               // JSON.stringify(env.payload)
-  map<string, string> meta = 3;          // correlationId, userId, source...
+  string type = 1;                   
+  string payload_json = 2;             
+  map<string, string> meta = 3;    
 }
 
 message Ok {
-  string payload_json = 1;               // JSON.stringify(reply)
+  string payload_json = 1;            
 }
 
 message BasicError {
-  string _type = 1;                      // np. "ValidationError"
+  string _type = 1;               
   string message = 2;
 }
 

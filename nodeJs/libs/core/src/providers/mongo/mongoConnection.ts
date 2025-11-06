@@ -7,29 +7,37 @@ import {
   basicErr,
 } from '../../utils/result';
 import { MONGO_TOKENS, type MongoConfig } from './types';
+import { LoggerFactory, LOGGING_TYPES } from '../../features/logging';
 
 @injectable()
 export class MongoConnection {
   public client: MongoClient;
   private db: Db | null = null;
+  private readonly logger: ReturnType<LoggerFactory['forScope']>;
 
   constructor(
     @inject(MONGO_TOKENS.MONGOCONFIG_KEY) private readonly config: MongoConfig,
+    @inject(LOGGING_TYPES.LoggerFactory)
+    private readonly loggerFactory: LoggerFactory,
   ) {
     this.client = new MongoClient(config.uri);
+    this.logger = this.loggerFactory.forScope('MONGO');
   }
 
   async connect(onFailure: () => void): Promise<Result<Db, BasicError>> {
     try {
-      console.log('Connecting to MongoDB...');
+      this.logger.info('Connecting to MongoDB...');
       await this.client.connect();
       this.db = this.client.db();
-      console.log('Connected to MongoDB');
+      this.logger.info('Connected to MongoDB');
       return ok(this.db);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
-      console.error('Failed to connect to MongoDB:', errorMessage);
+      this.logger.error(
+        { error: errorMessage },
+        'Failed to connect to MongoDB'
+      );
       onFailure();
       return basicErr(`Failed to connect to MongoDB: ${errorMessage}`);
     }
@@ -40,27 +48,19 @@ export class MongoConnection {
       if (this.client) {
         await this.client.close();
         this.db = null;
-        console.log('MongoDB connection closed');
+        this.logger.info('MongoDB connection closed');
         return ok(undefined);
       }
       return ok(undefined);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Unknown error';
-      console.error('Failed to close MongoDB connection:', errorMessage);
+      this.logger.error(
+        { error: errorMessage },
+        'Failed to close MongoDB connection'
+      );
       onFailure();
       return basicErr(`Failed to close MongoDB connection: ${errorMessage}`);
     }
-  }
-
-  getDb(): Db {
-    if (!this.db) {
-      throw new Error('Database not connected. Call connect() first.');
-    }
-    return this.db;
-  }
-
-  isConnected(): boolean {
-    return this.db !== null;
   }
 }

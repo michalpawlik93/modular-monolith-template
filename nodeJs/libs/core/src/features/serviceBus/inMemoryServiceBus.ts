@@ -15,7 +15,7 @@ import {
 
 @injectable()
 export class InMemoryServiceBus extends BaseServiceBus {
-  constructor(@inject(TYPES.Container) container: Container) {
+  constructor(@inject(Container) protected readonly container: Container) {
     super(container);
   }
 

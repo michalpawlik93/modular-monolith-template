@@ -29,15 +29,7 @@ export const resolveLogLevel = (value?: string | null): LogLevel => {
 };
 
 const resolveLogFilePath = (value?: string | null): string => {
-  if (!value) {
-    return path.join(process.cwd(), 'logs', 'core-svc.log');
-  }
-
-  if (path.isAbsolute(value)) {
-    return value;
-  }
-
-  return path.join(process.cwd(), value);
+  return value ? path.join(process.cwd(), value) : path.join(process.cwd(), 'logs', 'core-svc.log');
 };
 
 export const buildLoggerConfig = (): LoggerConfig => ({
@@ -47,10 +39,9 @@ export const buildLoggerConfig = (): LoggerConfig => ({
 });
 
 export const buildMongoConfig = (): MongoConfig => ({
-  uri: process.env.MONGO_URI ?? 'mongodb://localhost:27017/core',
+  uri: process.env.MONGO_URI,
 });
 
 export const getEnvironment = (): string => environment;
 
-export const getGrpcServerAddress = (): string =>
-  process.env.GRPC_SERVER_ADDRESS ?? '0.0.0.0:50051';
+export const getGrpcServerAddress = (): string => process.env.GRPC_SERVER_ADDRESS ;

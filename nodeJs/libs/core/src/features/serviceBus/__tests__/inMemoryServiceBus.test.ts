@@ -10,8 +10,7 @@ import {
   NoHandlerErrorType,
 } from '../serviceBus';
 import { InMemoryServiceBus } from '../inMemoryServiceBus';
-import { COMMAND_BUS_TOKENS } from '../di';
-import { Result, BasicError, ok } from '../../../utils/result';
+import { Result, BasicError, ok, isOk, isErr } from '../../../utils/result';
 
 interface TestCommand extends BaseCommand {
   data: string;
@@ -44,10 +43,7 @@ describe('InMemoryServiceBus', () => {
   beforeEach(() => {
     observedPayload = undefined;
     container = new Container();
-    container.bind<Container>(TYPES.Container).toConstantValue(container);
-    container
-      .bind<ICommandBus>(COMMAND_BUS_TOKENS.CommandBus)
-      .to(InMemoryServiceBus);
+    
     container
       .bind<Handler<TestCommand, { result: string }>>(TYPES.Handler)
       .to(TestHandler)
@@ -57,7 +53,7 @@ describe('InMemoryServiceBus', () => {
       RequestChangeMiddleware
     );
 
-    serviceBus = container.get<ICommandBus>(COMMAND_BUS_TOKENS.CommandBus);
+    serviceBus = new InMemoryServiceBus(container);
   });
 
   test('invokes a registered handler', async () => {
@@ -70,8 +66,7 @@ describe('InMemoryServiceBus', () => {
       envelope
     );
 
-    expect(result._tag).toBe('ok');
-    if (result._tag === 'ok') {
+    if (isOk(result)) {
       expect(result.value).toEqual({ result: 'Handled: Changed' });
     }
   });
@@ -87,8 +82,7 @@ describe('InMemoryServiceBus', () => {
       envelope
     );
 
-    expect(result._tag).toBe('err');
-    if (result._tag === 'err') {
+    if (isErr(result)) {
       expect(result.error._type).toBe(NoHandlerErrorType);
     }
   });
@@ -103,9 +97,8 @@ describe('InMemoryServiceBus', () => {
       envelope
     );
 
-    expect(result._tag).toBe('ok');
-    expect(observedPayload?.data).toBe('Changed');
-    if (result._tag === 'ok') {
+    if (isOk(result)) {
+     expect(observedPayload?.data).toBe('Changed');
       expect(result.value).toEqual({ result: 'Handled: Changed' });
     }
   });

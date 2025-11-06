@@ -2,13 +2,7 @@ import { Container } from 'inversify';
 import { Db } from 'mongodb';
 import { MongoConnection } from './mongoConnection';
 import { MONGO_TOKENS, type MongoConfig } from './types';
-
-const bindOrRebind = (container: Container, identifier: symbol, binder: () => void) => {
-  if (container.isBound(identifier)) {
-    container.unbind(identifier);
-  }
-  binder();
-};
+import { bindOrRebind } from '../../utils/inversify';
 
 export const registerMongoConnection = (
   container: Container,

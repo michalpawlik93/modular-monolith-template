@@ -1,3 +1,3 @@
 export * from './protoLoader';
-export * from './grpc-command-bus-server';
+export * from './grpcCommandBusServer';
 export * from './di';

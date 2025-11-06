@@ -31,10 +31,9 @@ export async function setupContainer(): Promise<{
   registerLookupsDomain(container);
 
   const requestContext = container.get<RequestContext>(LOGGING_TYPES.RequestContext);
-  const requestId = ulid();
 
   const runWithContext = <T>(fn: () => T | Promise<T>): T | Promise<T> => {
-    return requestContext.run({ requestId }, fn);
+    return requestContext.run({ requestId: ulid()}, fn);
   };
 
   return { container, runWithContext };

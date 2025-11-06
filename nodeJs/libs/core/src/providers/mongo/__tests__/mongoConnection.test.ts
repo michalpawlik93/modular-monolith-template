@@ -1,9 +1,13 @@
 import 'reflect-metadata';
 import { MongoConnection } from '../mongoConnection';
-import type { MongoConfig } from '../types';
 import { isOk, isErr } from '../../../utils/result';
+import { LoggerFactory } from '../../../features/logging';
+import type { ILogger } from '../../../features/logging/ILogger';
 
-// Mock MongoDB
+type MongoConfig = {
+  uri: string;
+};
+
 const mockConnect = jest.fn();
 const mockClose = jest.fn();
 const mockDb = jest.fn().mockReturnValue({
@@ -18,18 +22,33 @@ jest.mock('mongodb', () => ({
   })),
 }));
 
+const mockLogger: ILogger = {
+  debug: jest.fn(),
+  info: jest.fn(),
+  warn: jest.fn(),
+  error: jest.fn(),
+  child: jest.fn(() => mockLogger),
+};
+
+const mockLoggerFactory: Partial<LoggerFactory> = {
+  forScope: jest.fn(() => mockLogger),
+};
+
 describe('MongoConnection', () => {
   let mongoConnection: MongoConnection;
+  let loggerFactory: jest.Mocked<LoggerFactory>;
 
   beforeEach(() => {
+    jest.clearAllMocks();
     const mongoConfig: MongoConfig = {
       uri: 'mongodb://localhost:27017/amadeo-test',
     };
-    mongoConnection = new MongoConnection(mongoConfig);
+    loggerFactory = mockLoggerFactory as jest.Mocked<LoggerFactory>;
+    mongoConnection = new MongoConnection(mongoConfig, loggerFactory);
   });
 
   afterEach(async () => {
-    if (mongoConnection.isConnected()) {
+    if (mongoConnection.client) {
       await mongoConnection.close(() => undefined);
     }
     jest.clearAllMocks();
@@ -46,9 +65,10 @@ describe('MongoConnection', () => {
     expect(isOk(result)).toBeTruthy();
     if (isOk(result)) {
       expect(result.value).toBeDefined();
-      expect(mongoConnection.isConnected()).toBeTruthy();
     }
     expect(mockConnect).toHaveBeenCalled();
+    expect(mockLogger.info).toHaveBeenCalledWith('Connecting to MongoDB...');
+    expect(mockLogger.info).toHaveBeenCalledWith('Connected to MongoDB');
   });
 
   it('should close connection successfully', async () => {
@@ -64,30 +84,8 @@ describe('MongoConnection', () => {
 
     // Assert
     expect(isOk(closeResult)).toBeTruthy();
-    expect(mongoConnection.isConnected()).toBeFalsy();
     expect(mockClose).toHaveBeenCalled();
-  });
-
-  it('should throw error when getting db without connection', () => {
-    // Act & Assert
-    expect(() => mongoConnection.getDb()).toThrow(
-      'Database not connected. Call connect() first.'
-    );
-  });
-
-  it('should return correct database instance when connected', async () => {
-    // Arrange
-    mockConnect.mockResolvedValue(undefined);
-
-    const connectResult = await mongoConnection.connect(() => undefined);
-    expect(isOk(connectResult)).toBeTruthy();
-
-    // Act
-    const db = mongoConnection.getDb();
-
-    // Assert
-    expect(db).toBeDefined();
-    expect(db.databaseName).toBe('amadeo-test');
+    expect(mockLogger.info).toHaveBeenCalledWith('MongoDB connection closed');
   });
 
   it('should handle connection errors gracefully', async () => {
@@ -105,8 +103,11 @@ describe('MongoConnection', () => {
       expect(result.error.message).toContain('Failed to connect to MongoDB');
       expect(result.error.message).toContain(errorMessage);
     }
-    expect(mongoConnection.isConnected()).toBeFalsy();
     expect(onFailure).toHaveBeenCalled();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      { error: errorMessage },
+      'Failed to connect to MongoDB'
+    );
   });
 
   it('should handle disconnect errors gracefully', async () => {
@@ -130,26 +131,39 @@ describe('MongoConnection', () => {
       expect(result.error.message).toContain('Disconnect failed');
     }
     expect(onFailure).toHaveBeenCalled();
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      { error: 'Disconnect failed' },
+      'Failed to close MongoDB connection'
+    );
   });
 });
 
 describe('MongoConnection constructor', () => {
   it('should create connection with default URI', () => {
+    // Arrange
+    const loggerFactory = mockLoggerFactory as jest.Mocked<LoggerFactory>;
+
     // Act
-    const connection = new MongoConnection({ uri: 'mongodb://localhost:27017/test' });
+    const connection = new MongoConnection(
+      { uri: 'mongodb://localhost:27017/test' },
+      loggerFactory
+    );
 
     // Assert
     expect(connection).toBeInstanceOf(MongoConnection);
+    expect(loggerFactory.forScope).toHaveBeenCalledWith('MONGO');
   });
 
   it('should create connection with custom URI', () => {
     // Arrange
     const customUri = 'mongodb://localhost:27017/custom-test';
+    const loggerFactory = mockLoggerFactory as jest.Mocked<LoggerFactory>;
 
     // Act
-    const connection = new MongoConnection({ uri: customUri });
+    const connection = new MongoConnection({ uri: customUri }, loggerFactory);
 
     // Assert
     expect(connection).toBeInstanceOf(MongoConnection);
+    expect(loggerFactory.forScope).toHaveBeenCalledWith('MONGO');
   });
 });
