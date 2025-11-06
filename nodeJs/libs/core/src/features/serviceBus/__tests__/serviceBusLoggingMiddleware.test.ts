@@ -4,27 +4,17 @@ import { LoggerFactory } from '../../logging';
 import type { ILogger } from '../../logging/ILogger';
 import type { Envelope } from '../serviceBus';
 import {  BasicError, ok, err, isOk, isErr } from '../../../utils/result';
-
-const mockLogger: ILogger = {
-  debug: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  child: jest.fn(),
-};
-
-const mockLoggerFactory: Partial<LoggerFactory> = {
-  forScope: jest.fn(() => mockLogger),
-};
+import { createLoggerFactoryMock } from '../../logging/__fixtures__';
 
 describe('ServiceBusLoggingMiddleware', () => {
   let middleware: ServiceBusLoggingMiddleware;
   let loggerFactory: jest.Mocked<LoggerFactory>;
+  let logger: jest.Mocked<ILogger>;
 
   beforeEach(() => {
     jest.clearAllMocks();
     
-    loggerFactory = mockLoggerFactory as jest.Mocked<LoggerFactory>;
+    ({ factory: loggerFactory, logger } = createLoggerFactoryMock());
     middleware = new ServiceBusLoggingMiddleware(loggerFactory);
   });
 
@@ -45,7 +35,7 @@ describe('ServiceBusLoggingMiddleware', () => {
       expect(loggerFactory.forScope).toHaveBeenCalledWith('SERVICEBUS', {
         commandType: 'test.command',
       });
-      expect(mockLogger.info).toHaveBeenCalledWith(
+      expect(logger.info).toHaveBeenCalledWith(
         {
           commandType: 'test.command',
           commandId: 'cmd-123',
@@ -64,8 +54,8 @@ describe('ServiceBusLoggingMiddleware', () => {
 
       const result = await middleware.handle(envelope, next);
 
-      expect(mockLogger.info).toHaveBeenCalledTimes(2);
-      expect(mockLogger.info).toHaveBeenNthCalledWith(
+      expect(logger.info).toHaveBeenCalledTimes(2);
+      expect(logger.info).toHaveBeenNthCalledWith(
         1,
         expect.objectContaining({
           commandType: 'test.command',
@@ -73,7 +63,7 @@ describe('ServiceBusLoggingMiddleware', () => {
         }),
         expect.stringContaining('Processing command')
       );
-      expect(mockLogger.info).toHaveBeenNthCalledWith(
+      expect(logger.info).toHaveBeenNthCalledWith(
         2,
         {
           commandType: 'test.command',
@@ -95,15 +85,15 @@ describe('ServiceBusLoggingMiddleware', () => {
 
       const result = await middleware.handle(envelope, next);
 
-      expect(mockLogger.info).toHaveBeenCalledTimes(1);
-      expect(mockLogger.info).toHaveBeenCalledWith(
+      expect(logger.info).toHaveBeenCalledTimes(1);
+      expect(logger.info).toHaveBeenCalledWith(
         expect.objectContaining({
           commandType: 'test.command',
           commandId: 'cmd-789',
         }),
         expect.stringContaining('Processing command')
       );
-      expect(mockLogger.error).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         {
           commandType: 'test.command',
           commandId: 'cmd-789',
@@ -127,7 +117,7 @@ describe('ServiceBusLoggingMiddleware', () => {
 
       await middleware.handle(envelope, next);
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
+      expect(logger.info).toHaveBeenCalledWith(
         expect.objectContaining({
           commandId: 'command-id-123',
         }),
@@ -142,7 +132,7 @@ describe('ServiceBusLoggingMiddleware', () => {
 
       await middleware.handle(envelope, next);
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
+      expect(logger.info).toHaveBeenCalledWith(
         expect.objectContaining({
           commandId: 'command-type-456',
         }),
@@ -157,7 +147,7 @@ describe('ServiceBusLoggingMiddleware', () => {
 
       await middleware.handle(envelope, next);
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
+      expect(logger.info).toHaveBeenCalledWith(
         expect.objectContaining({
           commandId: 'test.command',
         }),
@@ -175,7 +165,7 @@ describe('ServiceBusLoggingMiddleware', () => {
 
       await middleware.handle(envelope, next);
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
+      expect(logger.info).toHaveBeenCalledWith(
         expect.objectContaining({
           commandId: 'preferred-id',
         }),
@@ -206,7 +196,7 @@ describe('ServiceBusLoggingMiddleware', () => {
 
       await middleware.handle(envelope, next);
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
+      expect(logger.info).toHaveBeenCalledWith(
         {
           commandType: 'test.command',
           commandId: 'cmd-123',
@@ -255,7 +245,7 @@ describe('ServiceBusLoggingMiddleware', () => {
 
       await middleware.handle(envelope, next);
 
-      expect(mockLogger.info).toHaveBeenCalledWith(
+      expect(logger.info).toHaveBeenCalledWith(
         {
           commandType: 'test.command',
           commandId: 'cmd-123',
@@ -276,7 +266,7 @@ describe('ServiceBusLoggingMiddleware', () => {
 
       await middleware.handle(envelope, next);
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
+      expect(logger.error).toHaveBeenCalledWith(
         {
           commandType: 'test.command',
           commandId: 'cmd-123',

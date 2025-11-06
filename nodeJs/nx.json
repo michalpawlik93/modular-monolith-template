@@ -10,7 +10,7 @@
   },
   "targetDefaults": {
     "lint": {
-      "inputs": ["default", "{workspaceRoot}/.eslintrc.json", "{workspaceRoot}/tsconfig.base.json"]
+      "inputs": ["default", "{workspaceRoot}/.eslintrc.json", "{projectRoot}/.eslintrc.json", "{workspaceRoot}/tsconfig.base.json"]
     },
     "test": {
       "inputs": ["default", "^default"],

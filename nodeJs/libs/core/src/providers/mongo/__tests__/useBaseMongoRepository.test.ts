@@ -624,7 +624,7 @@ describe('useBaseRepository', () => {
       const result = await repository.executeTransaction(operation);
 
       expect(result).toEqual(
-        notFoundErr('Transaction failed: Error: Transaction failed')
+        notFoundErr('Transaction failed: Transaction failed')
       );
       expect((mockDb as any).client.startSession).toHaveBeenCalled();
       expect(mockSession.withTransaction).toHaveBeenCalled();
@@ -657,7 +657,7 @@ describe('useBaseRepository', () => {
       const result = await repository.executeTransaction(operation);
 
       expect(result).toEqual(
-        notFoundErr('Transaction failed: Error: Operation failed')
+        notFoundErr('Transaction failed: Operation failed')
       );
       expect((mockDb as any).client.startSession).toHaveBeenCalled();
       expect(mockSession.withTransaction).toHaveBeenCalled();

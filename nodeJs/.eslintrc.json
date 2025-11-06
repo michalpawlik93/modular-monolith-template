@@ -1,6 +1,11 @@
 {
   "root": true,
-  "ignorePatterns": ["**/*"],
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.nx/**",
+    "**/coverage/**"
+  ],
   "plugins": ["@nx"],
   "extends": ["plugin:@nx/typescript"],
   "overrides": [

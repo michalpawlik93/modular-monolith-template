@@ -4,12 +4,7 @@
   "main": "index.js",
   "scripts": {
     "nx": "nx",
-    "lint": "nx run-many --target=lint --projects=app-console,lookup,core",
-    "test": "nx run-many --target=test --projects=app-console,lookup,core",
-    "lint:app-console": "nx lint app-console",
-    "test:app-console": "nx test app-console",
-    "lint:lookup": "nx lint lookup",
-    "test:lookup": "nx test lookup"
+    "test": "nx run-many --target=test --projects=app-console,lookup,core,core-svc"
   },
   "keywords": [],
   "author": "",

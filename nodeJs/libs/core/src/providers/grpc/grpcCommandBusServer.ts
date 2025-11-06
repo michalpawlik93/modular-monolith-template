@@ -14,13 +14,13 @@ import {
   isOk,
 } from '../../utils/result';
 
-type InvokeReq = {
+export type InvokeReq = {
   type: string;
   payload_json: string;
   meta: Record<string, string>;
 };
 
-type InvokeRes =
+export type InvokeRes =
   | { ok: { payload_json: string } }
   | { err: { _type: string; message: string } };
 

@@ -3,6 +3,7 @@ import { MongoConnection } from '../mongoConnection';
 import { isOk, isErr } from '../../../utils/result';
 import { LoggerFactory } from '../../../features/logging';
 import type { ILogger } from '../../../features/logging/ILogger';
+import { createLoggerFactoryMock } from '../../../features/logging/__fixtures__';
 
 type MongoConfig = {
   uri: string;
@@ -22,28 +23,17 @@ jest.mock('mongodb', () => ({
   })),
 }));
 
-const mockLogger: ILogger = {
-  debug: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  child: jest.fn(() => mockLogger),
-};
-
-const mockLoggerFactory: Partial<LoggerFactory> = {
-  forScope: jest.fn(() => mockLogger),
-};
-
 describe('MongoConnection', () => {
   let mongoConnection: MongoConnection;
   let loggerFactory: jest.Mocked<LoggerFactory>;
+  let logger: jest.Mocked<ILogger>;
 
   beforeEach(() => {
     jest.clearAllMocks();
     const mongoConfig: MongoConfig = {
       uri: 'mongodb://localhost:27017/amadeo-test',
     };
-    loggerFactory = mockLoggerFactory as jest.Mocked<LoggerFactory>;
+    ({ factory: loggerFactory, logger } = createLoggerFactoryMock());
     mongoConnection = new MongoConnection(mongoConfig, loggerFactory);
   });
 
@@ -67,8 +57,8 @@ describe('MongoConnection', () => {
       expect(result.value).toBeDefined();
     }
     expect(mockConnect).toHaveBeenCalled();
-    expect(mockLogger.info).toHaveBeenCalledWith('Connecting to MongoDB...');
-    expect(mockLogger.info).toHaveBeenCalledWith('Connected to MongoDB');
+    expect(logger.info).toHaveBeenCalledWith('Connecting to MongoDB...');
+    expect(logger.info).toHaveBeenCalledWith('Connected to MongoDB');
   });
 
   it('should close connection successfully', async () => {
@@ -85,7 +75,7 @@ describe('MongoConnection', () => {
     // Assert
     expect(isOk(closeResult)).toBeTruthy();
     expect(mockClose).toHaveBeenCalled();
-    expect(mockLogger.info).toHaveBeenCalledWith('MongoDB connection closed');
+    expect(logger.info).toHaveBeenCalledWith('MongoDB connection closed');
   });
 
   it('should handle connection errors gracefully', async () => {
@@ -104,7 +94,7 @@ describe('MongoConnection', () => {
       expect(result.error.message).toContain(errorMessage);
     }
     expect(onFailure).toHaveBeenCalled();
-    expect(mockLogger.error).toHaveBeenCalledWith(
+    expect(logger.error).toHaveBeenCalledWith(
       { error: errorMessage },
       'Failed to connect to MongoDB'
     );
@@ -131,7 +121,7 @@ describe('MongoConnection', () => {
       expect(result.error.message).toContain('Disconnect failed');
     }
     expect(onFailure).toHaveBeenCalled();
-    expect(mockLogger.error).toHaveBeenCalledWith(
+    expect(logger.error).toHaveBeenCalledWith(
       { error: 'Disconnect failed' },
       'Failed to close MongoDB connection'
     );
@@ -140,30 +130,29 @@ describe('MongoConnection', () => {
 
 describe('MongoConnection constructor', () => {
   it('should create connection with default URI', () => {
-    // Arrange
-    const loggerFactory = mockLoggerFactory as jest.Mocked<LoggerFactory>;
+    const { factory } = createLoggerFactoryMock();
 
     // Act
     const connection = new MongoConnection(
       { uri: 'mongodb://localhost:27017/test' },
-      loggerFactory
+      factory
     );
 
     // Assert
     expect(connection).toBeInstanceOf(MongoConnection);
-    expect(loggerFactory.forScope).toHaveBeenCalledWith('MONGO');
+    expect(factory.forScope).toHaveBeenCalledWith('MONGO');
   });
 
   it('should create connection with custom URI', () => {
     // Arrange
     const customUri = 'mongodb://localhost:27017/custom-test';
-    const loggerFactory = mockLoggerFactory as jest.Mocked<LoggerFactory>;
+    const { factory } = createLoggerFactoryMock();
 
     // Act
-    const connection = new MongoConnection({ uri: customUri }, loggerFactory);
+    const connection = new MongoConnection({ uri: customUri }, factory);
 
     // Assert
     expect(connection).toBeInstanceOf(MongoConnection);
-    expect(loggerFactory.forScope).toHaveBeenCalledWith('MONGO');
+    expect(factory.forScope).toHaveBeenCalledWith('MONGO');
   });
 });
