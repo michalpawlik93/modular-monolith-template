@@ -4,11 +4,12 @@ export default {
   preset: '../../jest.preset.js',
   testEnvironment: 'node',
   transform: {
-    '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }]
+    '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }],
   },
   moduleNameMapper: {
-    '^@app/lookup$': '<rootDir>/src/index.ts'
+    '^@app/lookup$': '<rootDir>/src/index.ts',
+    '^@app/core$': '<rootDir>/../../libs/core/src/index.ts',
   },
   moduleFileExtensions: ['ts', 'js'],
-  coverageDirectory: '../../coverage/libs/lookup'
+  coverageDirectory: '../../coverage/libs/lookup',
 };

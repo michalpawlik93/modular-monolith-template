@@ -3,7 +3,7 @@ import { Container } from 'inversify';
 import {
   GET_PAGED_LOOKUPS_COMMAND,
   GetPagedLookupsCommand,
-} from '../application/base/getPagedLookupsCommandHandler';
+} from '../application/base/handlers/getPagedLookupsCommandHandler';
 import { Lookup, mockLookup } from '../domain/models/lookup';
 
 export const mockGetPagedLookupsCommandHandler = (

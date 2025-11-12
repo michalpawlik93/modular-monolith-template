@@ -10,7 +10,7 @@ import {
   CREATE_LOOKUP_COMMAND_TYPE,
   CreateLookupCommand,
   CreateLookupResponse,
-} from '../application/base/createLookupCommandHandler';
+} from '../application/base/handlers/createLookupCommandHandler';
 
 export const mockCreateLookupCommandHandler = (
   container: Container,

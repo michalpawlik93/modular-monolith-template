@@ -2,8 +2,8 @@ import 'reflect-metadata';
 import { inject, injectable } from 'inversify';
 import { Handler, Envelope, BaseCommand, isErr } from '@app/core';
 import { Result, BasicError, ok, basicErr } from '@app/core';
-import { ILookupRepository, LOOKUP_REPOSITORY_KEY } from '../../infrastructure/mongo/lookupRepository';
-import { Lookup } from '../../domain';
+import { ILookupRepository, LOOKUP_REPOSITORY_KEY } from '../../../infrastructure/mongo/lookupRepository';
+import { Lookup } from '../../../domain';
 
 export const CREATE_LOOKUP_COMMAND_TYPE = 'lookup.create';
 

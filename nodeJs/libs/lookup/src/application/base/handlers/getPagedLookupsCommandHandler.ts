@@ -11,8 +11,8 @@ import {
 import {
   ILookupRepository,
   LOOKUP_REPOSITORY_KEY,
-} from '../../infrastructure/mongo/lookupRepository';
-import { Lookup } from '../../domain/models/lookup';
+} from '../../../infrastructure/mongo/lookupRepository';
+import { Lookup } from '../../../domain/models/lookup';
 import { inject, injectable } from 'inversify';
 
 export interface GetPagedLookupsCommand extends BaseCommand {

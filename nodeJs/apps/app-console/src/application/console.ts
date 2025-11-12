@@ -1,26 +1,23 @@
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import { Container } from 'inversify';
-import {
-  COMMAND_BUS_TOKENS,
-  ICommandBus,
-  isOk,
-  BasicError,
-  Result,
-} from '@app/core';
+import { isOk, BasicError, Result } from '@app/core';
 import {
   CreateLookupCommand,
   CreateLookupResponse,
+  FACADE_TOKENS,
+  ILookupBaseFacade,
 } from '@app/lookup';
 import { invokeCreateLookup } from './commands/invokeCreateLookup';
 import { invokeCreateLookupGrpc } from './commands/invokeCreateLookupGrpc';
 
 class ConsoleApp {
-  private readonly bus: ICommandBus;
-  private readonly rabbitEnabled: boolean;
+  private readonly lookupFacade: ILookupBaseFacade;
 
-  constructor(private readonly container: Container) {
-    this.bus = container.get<ICommandBus>(COMMAND_BUS_TOKENS.CommandBus);
+  constructor(container: Container) {
+    this.lookupFacade = container.get<ILookupBaseFacade>(
+      FACADE_TOKENS.LookupBase,
+    );
   }
 
   async run(): Promise<void> {
@@ -65,7 +62,7 @@ class ConsoleApp {
     const payload = this.buildPayload();
     console.log('Invoking CreateLookupCommand with payload:', payload);
 
-    const result = await invokeCreateLookup(this.bus, payload);
+    const result = await invokeCreateLookup(this.lookupFacade, payload);
     this.logInvokeResult(result);
   }
 
@@ -73,7 +70,7 @@ class ConsoleApp {
     const payload = this.buildPayload();
     console.log('Invoking CreateLookupCommand (gRPC) with payload:', payload);
 
-    const result = await invokeCreateLookupGrpc(this.container, payload);
+    const result = await invokeCreateLookupGrpc(this.lookupFacade, payload);
     this.logInvokeResult(result);
   }
 

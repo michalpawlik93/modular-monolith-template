@@ -9,5 +9,9 @@
     "src/**/*.d.ts",
     "src/__fixtures__/**/*.ts"
   ],
-  "references": [{ "path": "../core/tsconfig.lib.json" }]
+  "exclude": [],
+  "references": [
+    { "path": "./tsconfig.lib.json" },
+    { "path": "../core/tsconfig.lib.json" }
+  ]
 }

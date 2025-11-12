@@ -3,3 +3,4 @@ export * from "./inMemoryServiceBus";
 export * from "./grpcServiceBus";
 export * from "./di";
 export * from "./serviceBusLoggingMiddleware";
+export * from "./resolveBus";
