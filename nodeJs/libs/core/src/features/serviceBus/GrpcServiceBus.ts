@@ -1,52 +1,39 @@
 import 'reflect-metadata';
 import * as grpc from '@grpc/grpc-js';
 import { injectable, inject, Container } from 'inversify';
-import { loadBusProto, BusPackage } from '../../providers/grpc/protoLoader';
-import {
-  BaseServiceBus,
-  Envelope,
-  BaseCommand,
-} from './serviceBus';
-import {
-  Result,
-  BasicError,
-  ok,
-  err,
-  basicErr,
-} from '../../utils/result';
-
-export interface GrpcRoutingConfig {
-  modules: Record<string, string>;
-  defaultTimeoutMs?: number;
-}
+import { BaseServiceBus, Envelope, BaseCommand } from './serviceBus';
+import { Result, BasicError, ok, err, basicErr } from '../../utils/result';
+import { GrpcClientFactory, type CommandBusClient } from '../../providers/grpc/grpcClientFactory';
+import { parseGrpcPayload, encodeGrpcPayload } from '../../providers/grpc/grpcParser';
+import type { GrpcRoutingConfig } from '../../providers/grpc/grpcConfig';
 
 type InvokeReq = {
   type: string;
-  payload_json: string;
+  payload: Buffer;
   meta: Record<string, string>;
 };
 
 type InvokeRes =
-  | { ok: { payload_json: string } }
+  | { ok: { payload: Buffer } }
   | { err: { _type: string; message: string } };
 
-type CommandBusClient = grpc.Client & {
-  Invoke(
-    request: InvokeReq,
-    metadata: grpc.Metadata,
-    options: grpc.CallOptions,
-    callback: (error: grpc.ServiceError | null, response: InvokeRes | undefined) => void,
-  ): void;
-};
+export const GRPC_SERVICE_BUS_TOKENS = {
+  ClientFactory: Symbol.for('GrpcClientFactory'),
+} as const;
+
+const RETRYABLE_CODES: ReadonlySet<number> = new Set([
+  grpc.status.UNAVAILABLE,
+  grpc.status.RESOURCE_EXHAUSTED,
+  grpc.status.DEADLINE_EXCEEDED,
+]);
 
 @injectable()
 export class GrpcServiceBus extends BaseServiceBus {
-  private readonly clients = new Map<string, CommandBusClient>();//TODO: use DI
-  private readonly pkg: BusPackage = loadBusProto();//TODO: use DI
-
   constructor(
     @inject('GrpcRoutingConfig') private readonly cfg: GrpcRoutingConfig,
-    @inject(Container) protected readonly container: Container,
+    @inject(Container) container: Container,
+    @inject(GRPC_SERVICE_BUS_TOKENS.ClientFactory)
+    private readonly clientFactory: GrpcClientFactory,
   ) {
     super(container);
   }
@@ -56,12 +43,10 @@ export class GrpcServiceBus extends BaseServiceBus {
   ): Promise<Result<R, BasicError>> {
     const { module, address } = this.resolveTarget(env.type);
     if (!address) {
-      return basicErr(
-        `No gRPC endpoint configured for module: ${module}`,
-      );
+      return basicErr(`No gRPC endpoint configured for module: ${module}`);
     }
 
-    const client = this.getClient(address);
+    const client = this.clientFactory.getClient(address);
     const timeoutMs = this.cfg.defaultTimeoutMs ?? 5000;
     const deadline = new Date(Date.now() + timeoutMs);
 
@@ -78,32 +63,21 @@ export class GrpcServiceBus extends BaseServiceBus {
 
     const request: InvokeReq = {
       type: env.type,
-      payload_json: JSON.stringify(env.payload ?? {}),
+      payload: encodeGrpcPayload(env.payload),
       meta: (env.meta ?? {}) as Record<string, string>,
     };
 
     try {
-      const response = await new Promise<InvokeRes | undefined>((resolve, reject) => {
-        client.Invoke(
-          request,
-          metadata,
-          { deadline },
-          (error: grpc.ServiceError | null, res: InvokeRes | undefined) => {
-            if (error) {
-              reject(error);
-              return;
-            }
-            resolve(res);
-          },
-        );
-      });
+      const response = await this.invokeWithRetry(() =>
+        this.callRemote(client, request, metadata, { deadline }),
+      );
 
       if (!response) {
         return basicErr('Empty gRPC response');
       }
 
       if ('ok' in response && response.ok) {
-        return ok(this.parsePayload<R>(response.ok.payload_json));
+        return ok(parseGrpcPayload<R>(response.ok.payload) ?? (null as R));
       }
 
       if ('err' in response && response.err) {
@@ -117,45 +91,60 @@ export class GrpcServiceBus extends BaseServiceBus {
       return basicErr('Invalid gRPC response');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      return basicErr(
-        `gRPC invoke failed for ${env.type}: ${message}`,
-      );
+      return basicErr(`gRPC invoke failed for ${env.type}: ${message}`);
     }
   }
 
   private resolveTarget(type: string): { module: string; address?: string } {
     const module = type.split('.')[0] ?? '';
     let address = this.cfg.modules[module];
-    
-    // If no address found for the module, fallback to Core
+
     if (!address) {
       address = this.cfg.modules.Core;
     }
-    
+
     return { module, address };
   }
 
-  private getClient(address: string) {
-    let client = this.clients.get(address);
-    if (!client) {
-      const CommandBusCtor = this.pkg.bus.v1.CommandBus;
-      client = new CommandBusCtor(
-        address,
-        grpc.credentials.createInsecure(),
-      ) as CommandBusClient;
-      this.clients.set(address, client);
-    }
-    return client;
+  private callRemote(
+    client: CommandBusClient,
+    request: InvokeReq,
+    metadata: grpc.Metadata,
+    options: grpc.CallOptions,
+  ): Promise<InvokeRes | undefined> {
+    return new Promise<InvokeRes | undefined>((resolve, reject) => {
+      client.Invoke(request, metadata, options, (error, res) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve(res);
+      });
+    });
   }
 
-  private parsePayload<R>(json: string): R {
-    if (!json) {
-      return null as R;
+  private async invokeWithRetry<T>(callFn: () => Promise<T>): Promise<T> {
+    const configuredAttempts = this.cfg.client?.maxRetries ?? 3;
+    const maxAttempts = Math.max(1, configuredAttempts);
+    let attempt = 0;
+    let lastError: unknown;
+
+    while (attempt < maxAttempts) {
+      try {
+        return await callFn();
+      } catch (error) {
+        lastError = error;
+        const code = (error as grpc.ServiceError | undefined)?.code;
+        if (!code || !RETRYABLE_CODES.has(code)) {
+          throw error;
+        }
+
+        const delayMs = Math.min(1000 * 2 ** attempt, 5000);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        attempt += 1;
+      }
     }
-    try {
-      return JSON.parse(json) as R;
-    } catch {
-      return null as R;
-    }
+
+    throw lastError;
   }
 }

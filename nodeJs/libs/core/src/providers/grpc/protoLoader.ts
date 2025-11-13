@@ -6,7 +6,7 @@ export type CommandBusServiceConstructor = {
   new (
     address: string,
     credentials: grpc.ChannelCredentials,
-    options?: Partial<grpc.ClientOptions>,
+    options?: Partial<grpc.ChannelOptions>,
   ): grpc.Client;
   service: grpc.ServiceDefinition;
 };

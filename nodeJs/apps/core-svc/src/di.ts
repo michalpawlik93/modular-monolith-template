@@ -4,18 +4,32 @@ import {
   registerMongoConnection,
   registerServiceBus,
   registerGrpcCommandBusServer,
+  GRPC_SERVER_CONFIG_TOKEN,
   MONGO_TOKENS,
   MongoConnection,
+  type GrpcServerConfig,
+  type GrpcRoutingConfig,
 } from '@app/core';
 import { registerLookupsDomain } from '@app/lookup';
-import { buildLoggerConfig, buildMongoConfig } from './config';
+import {
+  buildLoggerConfig,
+  buildMongoConfig,
+  buildGrpcServerConfig,
+  buildGrpcRoutingConfig,
+} from './config';
 
 export const container = new Container();
 
 container.bind<Container>(Container).toConstantValue(container);
 
 registerLogging(container, buildLoggerConfig());
+const grpcRoutingConfig = buildGrpcRoutingConfig();
+container.bind<GrpcRoutingConfig>('GrpcRoutingConfig').toConstantValue(grpcRoutingConfig);
 registerServiceBus(container);
+const grpcServerConfig = buildGrpcServerConfig();
+container
+  .bind<GrpcServerConfig>(GRPC_SERVER_CONFIG_TOKEN)
+  .toConstantValue(grpcServerConfig);
 registerGrpcCommandBusServer(container);
 const mongoConnection = registerMongoConnection(container, buildMongoConfig());
 registerLookupsDomain(container);

@@ -54,12 +54,26 @@ describe('app-console config', () => {
       {
         GRPC_CORE_ENDPOINT: 'localhost:5000',
         GRPC_DEFAULT_TIMEOUT_MS: '1500',
+        GRPC_CLIENT_KEEPALIVE_TIME_MS: '40000',
+        GRPC_CLIENT_KEEPALIVE_TIMEOUT_MS: '5000',
+        GRPC_CLIENT_MAX_RECEIVE_MESSAGE_LENGTH: '1048576',
+        GRPC_CLIENT_MAX_SEND_MESSAGE_LENGTH: '2097152',
+        GRPC_CLIENT_COMPRESSION: 'none',
+        GRPC_CLIENT_MAX_RETRIES: '5',
       },
       ({ buildGrpcRoutingConfig }) => {
         const config = buildGrpcRoutingConfig();
 
         expect(config.modules.Core).toBe('localhost:5000');
         expect(config.defaultTimeoutMs).toBe(1500);
+        expect(config.client).toEqual({
+          keepaliveTimeMs: 40_000,
+          keepaliveTimeoutMs: 5_000,
+          maxReceiveMessageLength: 1_048_576,
+          maxSendMessageLength: 2_097_152,
+          compression: 'none',
+          maxRetries: 5,
+        });
       },
     );
   });

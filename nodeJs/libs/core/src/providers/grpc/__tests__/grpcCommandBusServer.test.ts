@@ -1,6 +1,11 @@
 import 'reflect-metadata';
 import { Container } from 'inversify';
-import { GrpcCommandBusServer, type InvokeReq, type InvokeRes } from '../grpcCommandBusServer';
+import {
+  GrpcCommandBusServer,
+  type InvokeReq,
+  type InvokeRes,
+} from '../grpcCommandBusServer';
+import type { GrpcServerConfig } from '../grpcConfig';
 import { loadBusProto } from '../protoLoader';
 import * as grpc from '@grpc/grpc-js';
 import { Handler, TYPES } from '../../../features/serviceBus/serviceBus';
@@ -18,6 +23,9 @@ jest.mock('@grpc/grpc-js', () => {
     ServerCredentials: {
       createInsecure,
     },
+    compressionAlgorithms: {
+      gzip: 2,
+    },
   };
 });
 
@@ -30,6 +38,11 @@ describe('GrpcCommandBusServer', () => {
   let serverBindAsyncMock: jest.Mock;
   let serverStartMock: jest.Mock;
   let serverTryShutdownMock: jest.Mock;
+  const defaultConfig: GrpcServerConfig = {
+    maxReceiveMessageLength: 32 * 1024 * 1024,
+    maxSendMessageLength: 32 * 1024 * 1024,
+    compression: 'gzip',
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -72,6 +85,25 @@ describe('GrpcCommandBusServer', () => {
 
     await server.start(address);
   };
+
+  test('creates grpc server with configured limits and compression', async () => {
+    const config: GrpcServerConfig = {
+      maxReceiveMessageLength: 10,
+      maxSendMessageLength: 20,
+      compression: 'gzip',
+    };
+    const server = new GrpcCommandBusServer(container, config);
+    await startServer(server);
+
+    expect((grpc.Server as unknown as jest.Mock).mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        'grpc.max_receive_message_length': 10,
+        'grpc.max_send_message_length': 20,
+        'grpc.default_compression_algorithm':
+          grpc.compressionAlgorithms.gzip,
+      }),
+    );
+  });
 
   const createMockCall = (request: InvokeReq): grpc.ServerUnaryCall<InvokeReq, InvokeRes> => {
     const mockMetadata = {
@@ -132,7 +164,7 @@ describe('GrpcCommandBusServer', () => {
   };
 
   test('registers gRPC service and forwards requests to handlers', async () => {
-    const server = new GrpcCommandBusServer(container);
+    const server = new GrpcCommandBusServer(container, defaultConfig);
     await startServer(server);
 
     const handler: Handler = {
@@ -149,7 +181,7 @@ describe('GrpcCommandBusServer', () => {
     await invoke(
       createMockCall({
         type: 'Lookup.Create',
-        payload_json: '{"id":"cmd-1"}',
+        payload: Buffer.from('{"id":"cmd-1"}', 'utf-8'),
         meta: { correlationId: 'corr-1' },
       }),
       callback,
@@ -161,12 +193,14 @@ describe('GrpcCommandBusServer', () => {
       meta: { correlationId: 'corr-1' },
     });
     expect(callback).toHaveBeenCalledWith(null, {
-      ok: { payload_json: JSON.stringify({ success: true }) },
+      ok: {
+        payload: Buffer.from(JSON.stringify({ success: true }), 'utf-8'),
+      },
     });
   });
 
   test('returns no handler error when command handler is not registered', async () => {
-    const server = new GrpcCommandBusServer(container);
+    const server = new GrpcCommandBusServer(container, defaultConfig);
     await startServer(server);
 
     const invoke = getInvoke();
@@ -175,7 +209,7 @@ describe('GrpcCommandBusServer', () => {
     await invoke(
       createMockCall({
         type: 'Lookup.Unknown',
-        payload_json: '{}',
+        payload: Buffer.from('{}', 'utf-8'),
         meta: {},
       }),
       callback,
@@ -193,7 +227,7 @@ describe('GrpcCommandBusServer', () => {
   });
 
   test('propagates domain error returned by handler', async () => {
-    const server = new GrpcCommandBusServer(container);
+    const server = new GrpcCommandBusServer(container, defaultConfig);
     await startServer(server);
 
     const handler: Handler = {
@@ -212,7 +246,7 @@ describe('GrpcCommandBusServer', () => {
     await invoke(
       createMockCall({
         type: 'Lookup.Fail',
-        payload_json: '{}',
+        payload: Buffer.from('{}', 'utf-8'),
         meta: {},
       }),
       callback,
@@ -224,7 +258,7 @@ describe('GrpcCommandBusServer', () => {
   });
 
   test('returns basic error when handler throws an exception', async () => {
-    const server = new GrpcCommandBusServer(container);
+    const server = new GrpcCommandBusServer(container, defaultConfig);
     await startServer(server);
 
     const handler: Handler = {
@@ -241,7 +275,7 @@ describe('GrpcCommandBusServer', () => {
     await invoke(
       createMockCall({
         type: 'Lookup.Throw',
-        payload_json: '{}',
+        payload: Buffer.from('{}', 'utf-8'),
         meta: {},
       }),
       callback,
@@ -259,7 +293,7 @@ describe('GrpcCommandBusServer', () => {
   });
 
   test('stops server via tryShutdown', async () => {
-    const server = new GrpcCommandBusServer(container);
+    const server = new GrpcCommandBusServer(container, defaultConfig);
     await startServer(server);
 
     await server.stop();
