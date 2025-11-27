@@ -4,13 +4,14 @@
   "main": "index.js",
   "scripts": {
     "nx": "nx",
-    "test": "nx run-many --target=test --projects=app-console,lookup,core,core-svc"
+    "test": "nx run-many --target=test --projects=app-console,accounts,products,core,core-svc"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
+    "prisma": "^6.2.1",
     "@nx/esbuild": "^22.0.2",
     "@nx/eslint-plugin": "^22.0.1",
     "@nx/jest": "^22.0.2",
@@ -31,6 +32,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@prisma/client": "^6.2.1",
     "dotenv": "^16.4.5",
     "inversify": "^7.10.4",
     "mongodb": "^6.20.0",

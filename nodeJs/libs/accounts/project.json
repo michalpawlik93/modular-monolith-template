@@ -1,0 +1,24 @@
+{
+  "name": "accounts",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "library",
+  "sourceRoot": "libs/accounts/src",
+  "targets": {
+    "lint": {
+      "executor": "@nx/eslint:lint",
+      "options": {
+        "lintFilePatterns": ["libs/accounts/**/*.ts"],
+        "eslintConfig": "libs/accounts/.eslintrc.json"
+      }
+    },
+    "test": {
+      "executor": "@nx/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/libs/accounts"],
+      "options": {
+        "jestConfig": "libs/accounts/jest.config.ts",
+        "passWithNoTests": true
+      }
+    }
+  },
+  "tags": ["type:lib", "scope:domain-accounts"]
+}

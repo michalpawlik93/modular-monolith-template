@@ -50,3 +50,5 @@ nodeJs/.nx/workspace-data
 
 # logs
 logs
+
+*/iac/docker/data

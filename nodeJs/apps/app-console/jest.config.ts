@@ -7,7 +7,8 @@ export default {
     '^.+\\.[tj]s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.spec.json' }]
   },
   moduleNameMapper: {
-    '^@app/lookup$': '<rootDir>/../../libs/lookup/src/index.ts',
+    '^@app/products$': '<rootDir>/../../libs/products/src/index.ts',
+    '^@app/accounts$': '<rootDir>/../../libs/accounts/src/index.ts',
     '^@app/app-console$': '<rootDir>/src/main.ts'
   },
   moduleFileExtensions: ['ts', 'js'],

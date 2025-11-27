@@ -1,19 +1,16 @@
 import { Container } from 'inversify';
 import {
   registerLogging,
-  registerMongoConnection,
   registerServiceBus,
   registerGrpcCommandBusServer,
   GRPC_SERVER_CONFIG_TOKEN,
-  MONGO_TOKENS,
-  MongoConnection,
   type GrpcServerConfig,
   type GrpcRoutingConfig,
 } from '@app/core';
-import { registerLookupsDomain } from '@app/lookup';
+import { buildAccountsPrismaConfig, registerAccountsDomain } from '@app/accounts';
+import { buildProductsPrismaConfig, registerProductsDomain } from '@app/products';
 import {
   buildLoggerConfig,
-  buildMongoConfig,
   buildGrpcServerConfig,
   buildGrpcRoutingConfig,
 } from './config';
@@ -31,20 +28,17 @@ container
   .bind<GrpcServerConfig>(GRPC_SERVER_CONFIG_TOKEN)
   .toConstantValue(grpcServerConfig);
 registerGrpcCommandBusServer(container);
-const mongoConnection = registerMongoConnection(container, buildMongoConfig());
-registerLookupsDomain(container);
+registerAccountsDomain(container, { prisma: buildAccountsPrismaConfig() });//ToDO refactor
+registerProductsDomain(container, { prisma: buildProductsPrismaConfig() });
 
 export const connectInfrastructure = async (): Promise<void> => {
-  await mongoConnection.connect(() => {
-    process.exit(1);
-  });
+  return;
 };
 
 export const disconnectInfrastructure = async (): Promise<void> => {
   try {
-    const connection = container.get<MongoConnection>(MONGO_TOKENS.MONGOCONNECTION_KEY);
-    await connection.close(() => undefined);
+    return;
   } catch (error) {
-    console.error('Error disconnecting MongoDB:', error);
+    console.error('Error disconnecting:', error);
   }
 };

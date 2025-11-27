@@ -4,7 +4,6 @@ import { config as loadEnv } from 'dotenv';
 import {
   type LoggerConfig,
   type LogLevel,
-  type MongoConfig,
   type GrpcRoutingConfig,
   resolveNumberWithDefault,
   resolveCompression,
@@ -55,10 +54,6 @@ export const buildLoggerConfig = (): LoggerConfig => ({
   level: resolveLogLevel(process.env.LOG_LEVEL),
   filePath: resolveLogFilePath(process.env.LOG_FILE_PATH),
   prettyInDev: environment !== 'production',
-});
-
-export const buildMongoConfig = (): MongoConfig => ({
-  uri: process.env.MONGO_URI,
 });
 
 export const getEnvironment = (): string => environment;

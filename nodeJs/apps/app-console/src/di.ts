@@ -1,19 +1,16 @@
 import { Container } from 'inversify';
 import { ulid } from 'ulid';
 import {
-  MONGO_TOKENS,
-  MongoConnection,
   registerLogging,
-  registerMongoConnection,
   registerServiceBus,
   RequestContext,
   LOGGING_TYPES,
   type GrpcRoutingConfig,
 } from '@app/core';
-import { registerLookupsDomain } from '@app/lookup';
+import { buildAccountsPrismaConfig, registerAccountsDomain } from '@app/accounts';
+import { buildProductsPrismaConfig, registerProductsDomain } from '@app/products';
 import {
   buildLoggerConfig,
-  buildMongoConfig,
   buildGrpcRoutingConfig,
 } from './config';
 
@@ -27,8 +24,8 @@ export async function setupContainer(): Promise<{
   const grpcConfig = buildGrpcRoutingConfig();
   container.bind<GrpcRoutingConfig>('GrpcRoutingConfig').toConstantValue(grpcConfig);
   registerServiceBus(container);
-  registerMongoConnection(container, buildMongoConfig());
-  registerLookupsDomain(container);
+  registerAccountsDomain(container, { prisma: buildAccountsPrismaConfig() });//ToDO refactor
+  registerProductsDomain(container, { prisma: buildProductsPrismaConfig() });
 
   const requestContext = container.get<RequestContext>(LOGGING_TYPES.RequestContext);
 
@@ -40,20 +37,12 @@ export async function setupContainer(): Promise<{
 }
 
 export const setupConnections = async (container: Container) => {
-  const mongoConnection = container.get<MongoConnection>(MONGO_TOKENS.MONGOCONNECTION_KEY);
-  await mongoConnection.connect(() => {
-    process.exit(1);
-  });
+  return container;
 };
 
 export async function cleanConnections(container: Container) {
   try {
-    if (container) {
-      const mongoConnection = container.get<MongoConnection>(
-        MONGO_TOKENS.MONGOCONNECTION_KEY,
-      );
-      await mongoConnection.close(() => undefined);
-    }
+    return container;
   } catch (error) {
     console.error('Error disconnecting:', error);
   }
