@@ -1,77 +1,40 @@
-import { existsSync } from 'node:fs';
-import path from 'node:path';
-import { config as loadEnv } from 'dotenv';
 import {
   type LoggerConfig,
-  type LogLevel,
   type GrpcRoutingConfig,
+  type MongoConfig,
   resolveNumberWithDefault,
   resolveCompression,
   resolveRetries,
   DEFAULT_GRPC_MESSAGE_LENGTH,
   DEFAULT_GRPC_CLIENT_KEEPALIVE_TIME_MS,
   DEFAULT_GRPC_CLIENT_KEEPALIVE_TIMEOUT_MS,
+  loadEnvironment,
+  resolveLogLevel as resolveLogLevelValue,
+  resolveLogFilePath,
+  resolvePositiveInt,
 } from '@app/core';
 
-const environment = (process.env.NODE_ENV ?? 'development').toLowerCase();
-const envDirectory = path.resolve(process.cwd(), 'apps', 'app-console', 'config');
-const envFilePath = path.join(envDirectory, `env.${environment}`);
+const environment = loadEnvironment('app-console');
 
-if (existsSync(envFilePath)) {
-  loadEnv({ path: envFilePath });
-} else {
-  loadEnv();
-}
-
-const LOG_LEVELS: LogLevel[] = ['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'];
-
-export const resolveLogLevel = (value?: string | null): LogLevel => {
-  if (!value) {
-    return environment === 'production' ? 'info' : 'debug';
-  }
-
-  const normalized = value.toLowerCase() as LogLevel;
-  if (LOG_LEVELS.includes(normalized)) {
-    return normalized;
-  }
-
-  return environment === 'production' ? 'info' : 'debug';
-};
-
-const resolveLogFilePath = (value?: string | null): string => {
-  if (!value) {
-    return path.join(process.cwd(), 'logs', 'app-console.log');
-  }
-
-  if (path.isAbsolute(value)) {
-    return value;
-  }
-
-  return path.join(process.cwd(), value);
-};
+export const resolveLogLevel = (value?: string | null) => resolveLogLevelValue(environment, value);
 
 export const buildLoggerConfig = (): LoggerConfig => ({
-  level: resolveLogLevel(process.env.LOG_LEVEL),
-  filePath: resolveLogFilePath(process.env.LOG_FILE_PATH),
+  level: resolveLogLevelValue(environment, process.env.LOG_LEVEL),
+  filePath: resolveLogFilePath('app-console', process.env.LOG_FILE_PATH, { allowAbsolute: true }),
   prettyInDev: environment !== 'production',
 });
 
 export const getEnvironment = (): string => environment;
 
-const resolveTimeout = (value?: string | null): number | undefined => {
-  const parsed = Number.parseInt(value, 10);
-  if (Number.isFinite(parsed) && parsed > 0) {
-    return parsed;
-  }
-  return undefined;
-};
-
+export const buildMongoConfig = (): MongoConfig => ({
+  uri: process.env.MONGO_URI ?? 'mongodb://localhost:27017/app',
+});
 
 export const buildGrpcRoutingConfig = (): GrpcRoutingConfig => ({
   modules: {
     Core: process.env.GRPC_CORE_ENDPOINT,
   },
-  defaultTimeoutMs: resolveTimeout(process.env.GRPC_DEFAULT_TIMEOUT_MS),
+  defaultTimeoutMs: resolvePositiveInt(process.env.GRPC_DEFAULT_TIMEOUT_MS),
   client: {
     keepaliveTimeMs: resolveNumberWithDefault(
       process.env.GRPC_CLIENT_KEEPALIVE_TIME_MS,

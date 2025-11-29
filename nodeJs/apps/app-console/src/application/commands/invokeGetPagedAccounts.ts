@@ -1,9 +1,15 @@
-import { Result, BasicError, Pager, PagerResult } from '@app/core';
-import { IAccountBaseFacade, Account } from '@app/accounts';
+import {
+  Result,
+  BasicError,
+  Pager,
+  PagerResult,
+  IAccountBaseFacade,
+  AccountContract,
+} from '@app/core';
 
 export const invokeGetPagedAccounts = async (
   facade: IAccountBaseFacade,
   pager: Pager,
-): Promise<Result<PagerResult<Account>, BasicError>> => {
+): Promise<Result<PagerResult<AccountContract>, BasicError>> => {
   return facade.getPagedAccounts(pager, { via: 'inMemory' });
 };

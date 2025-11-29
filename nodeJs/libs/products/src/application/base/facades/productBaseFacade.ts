@@ -11,6 +11,12 @@ import {
   PagerResult,
 } from '@app/core';
 import {
+  IProductBaseFacade,
+  CreateProductCommandContract,
+  CreateProductResponseContract,
+  ProductContract,
+} from '@app/core';
+import {
   CREATE_PRODUCT_COMMAND_TYPE,
   CreateProductCommand,
   CreateProductResponse,
@@ -21,31 +27,18 @@ import {
 } from '../handlers/getPagedProductsCommandHandler';
 import { Product } from '../../../domain/models/product';
 
-export const PRODUCT_FACADE_TOKENS = {
-  Base: Symbol.for('ProductBaseFacade'),
-} as const;
-
-export interface IProductBaseFacade {
-  invokeCreateProduct(
-    payload: CreateProductCommand,
-    opts?: { via?: Transport },
-  ): Promise<Result<CreateProductResponse, BasicError>>;
-  getPagedProducts(
-    pager: Pager,
-    opts?: { via?: Transport },
-  ): Promise<Result<PagerResult<Product>, BasicError>>;
-}
-
 @injectable()
-export class ProductBaseFacade implements IProductBaseFacade {
+export class ProductBaseFacade
+  implements IProductBaseFacade
+{
   constructor(
     private readonly resolveBus: BusResolver,
   ) {}
 
   async invokeCreateProduct(
-    payload: CreateProductCommand,
+    payload: CreateProductCommandContract,
     opts?: { via?: Transport },
-  ): Promise<Result<CreateProductResponse, BasicError>> {
+  ): Promise<Result<CreateProductResponseContract, BasicError>> {
     const busResult = this.resolveBus(opts?.via);
 
     if (isErr(busResult)) {
@@ -54,7 +47,7 @@ export class ProductBaseFacade implements IProductBaseFacade {
 
     const envelope: Envelope<CreateProductCommand> = {
       type: CREATE_PRODUCT_COMMAND_TYPE,
-      payload,
+      payload: payload as CreateProductCommand,
     };
 
     return busResult.value.invoke<CreateProductCommand, CreateProductResponse>(
@@ -65,7 +58,7 @@ export class ProductBaseFacade implements IProductBaseFacade {
   async getPagedProducts(
     pager: Pager,
     opts?: { via?: Transport },
-  ): Promise<Result<PagerResult<Product>, BasicError>> {
+  ): Promise<Result<PagerResult<ProductContract>, BasicError>> {
     const busResult = this.resolveBus(opts?.via);
 
     if (isErr(busResult)) {

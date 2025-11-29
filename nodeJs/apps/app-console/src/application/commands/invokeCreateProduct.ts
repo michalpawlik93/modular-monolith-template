@@ -1,13 +1,14 @@
-import { Result, BasicError } from '@app/core';
 import {
-  CreateProductCommand,
-  CreateProductResponse,
+  Result,
+  BasicError,
   IProductBaseFacade,
-} from '@app/products';
+  CreateProductCommandContract,
+  CreateProductResponseContract,
+} from '@app/core';
 
 export const invokeCreateProduct = async (
   facade: IProductBaseFacade,
-  payload: CreateProductCommand,
-): Promise<Result<CreateProductResponse, BasicError>> => {
+  payload: CreateProductCommandContract,
+): Promise<Result<CreateProductResponseContract, BasicError>> => {
   return facade.invokeCreateProduct(payload, { via: 'inMemory' });
 };

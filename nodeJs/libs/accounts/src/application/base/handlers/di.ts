@@ -10,6 +10,11 @@ import {
   CreateAccountCommand,
   CreateAccountCommandHandler,
 } from './createAccountCommandHandler';
+import {
+  CREATE_ACCOUNT_WITH_PRODUCTS_COMMAND_TYPE,
+  CreateAccountWithProductsCommand,
+  CreateAccountWithProductsCommandHandler,
+} from './createAccountWithProductsCommandHandler';
 
 export const registerAccountsCommandHandlers = (container: Container) => {
   container
@@ -23,4 +28,10 @@ export const registerAccountsCommandHandlers = (container: Container) => {
     .to(CreateAccountCommandHandler)
     .inSingletonScope()
     .whenNamed(CREATE_ACCOUNT_COMMAND_TYPE);
+
+  container
+    .bind<Handler<CreateAccountWithProductsCommand>>(TYPES.Handler)
+    .to(CreateAccountWithProductsCommandHandler)
+    .inSingletonScope()
+    .whenNamed(CREATE_ACCOUNT_WITH_PRODUCTS_COMMAND_TYPE);
 };

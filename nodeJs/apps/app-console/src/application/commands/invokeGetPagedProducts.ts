@@ -1,9 +1,15 @@
-import { Result, BasicError, Pager, PagerResult } from '@app/core';
-import { IProductBaseFacade, Product } from '@app/products';
+import {
+  Result,
+  BasicError,
+  Pager,
+  PagerResult,
+  IProductBaseFacade,
+  ProductContract,
+} from '@app/core';
 
 export const invokeGetPagedProducts = async (
   facade: IProductBaseFacade,
   pager: Pager,
-): Promise<Result<PagerResult<Product>, BasicError>> => {
+): Promise<Result<PagerResult<ProductContract>, BasicError>> => {
   return facade.getPagedProducts(pager, { via: 'inMemory' });
 };

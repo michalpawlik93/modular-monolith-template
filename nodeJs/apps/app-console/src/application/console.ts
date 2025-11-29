@@ -1,26 +1,19 @@
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import { Container } from 'inversify';
-import { isOk, BasicError, Result, Pager, PagerResult } from '@app/core';
+import { isOk, BasicError, Result, Pager, PagerResult, CreateAccountCommandContract, CreateProductCommandContract, CreateAccountWithProductsCommandContract, CreateAccountResponseContract, CreateProductResponseContract, CreateAccountWithProductsResponseContract, ProductContract, AccountContract } from '@app/core';
 import {
-  CreateAccountCommand,
-  CreateAccountResponse,
   IAccountBaseFacade,
-  ACCOUNT_FACADE_TOKENS,
-  Account,
-} from '@app/accounts';
-import {
-  CreateProductCommand,
-  CreateProductResponse,
+  ACCOUNT_FACADE_TOKEN,
   IProductBaseFacade,
-  PRODUCT_FACADE_TOKENS,
-  Product,
-} from '@app/products';
+  PRODUCT_FACADE_TOKEN,
+} from '@app/core';
 import { invokeCreateAccount } from './commands/invokeCreateAccount';
 import { invokeCreateAccountGrpc } from './commands/invokeCreateAccountGrpc';
 import { invokeGetPagedAccounts } from './commands/invokeGetPagedAccounts';
 import { invokeCreateProduct } from './commands/invokeCreateProduct';
 import { invokeGetPagedProducts } from './commands/invokeGetPagedProducts';
+import { invokeCreateAccountWithProducts } from './commands/invokeCreateAccountWithProducts';
 
 class ConsoleApp {
   private readonly accountFacade: IAccountBaseFacade;
@@ -28,10 +21,10 @@ class ConsoleApp {
 
   constructor(container: Container) {
     this.accountFacade = container.get<IAccountBaseFacade>(
-      ACCOUNT_FACADE_TOKENS.Base,
+      ACCOUNT_FACADE_TOKEN,
     );
     this.productFacade = container.get<IProductBaseFacade>(
-      PRODUCT_FACADE_TOKENS.Base,
+      PRODUCT_FACADE_TOKEN,
     );
   }
 
@@ -46,6 +39,7 @@ class ConsoleApp {
       console.log('3. Get paged accounts');
       console.log('4. Invoke create product');
       console.log('5. Get paged products');
+      console.log('6. Invoke create account with products (saga)');
       console.log('0. Exit');
 
       const choice = (await rl.question('Select option: ')).trim();
@@ -66,6 +60,9 @@ class ConsoleApp {
         case '5':
           await this.handleGetPagedProducts();
           break;
+        case '6':
+          await this.handleInvokeAccountWithProducts();
+          break;
         case '0':
           exit = true;
           break;
@@ -77,7 +74,7 @@ class ConsoleApp {
     rl.close();
   }
 
-  private buildAccountPayload(): CreateAccountCommand {
+  private buildAccountPayload(): CreateAccountCommandContract {
     return {
       id: `account-${Date.now()}`,
       email: `user${Date.now()}@example.com`,
@@ -86,11 +83,32 @@ class ConsoleApp {
     };
   }
 
-  private buildProductPayload(): CreateProductCommand {
+  private buildProductPayload(): CreateProductCommandContract {
     return {
       id: `product-${Date.now()}`,
       name: 'Console sample product',
       priceCents: 1999,
+    };
+  }
+
+  private buildAccountWithProductsPayload(): CreateAccountWithProductsCommandContract {
+    const accountId = `account-${Date.now()}`;
+    const productId = `product-${Date.now()}`;
+    return {
+      commandId: `account-saga-${Date.now()}`,
+      account: {
+        id: accountId,
+        email: `user${Date.now()}@example.com`,
+        displayName: 'Console Account (saga)',
+        role: 'user',
+      },
+      products: [
+        {
+          id: productId,
+          name: 'Saga sample product',
+          priceCents: 2999,
+        },
+      ],
     };
   }
 
@@ -129,6 +147,20 @@ class ConsoleApp {
     this.logInvokeResult(result);
   }
 
+  private async handleInvokeAccountWithProducts(): Promise<void> {
+    const payload = this.buildAccountWithProductsPayload();
+    console.log(
+      'Invoking CreateAccountWithProductsCommand with payload:',
+      payload,
+    );
+
+    const result = await invokeCreateAccountWithProducts(
+      this.accountFacade,
+      payload,
+    );
+    this.logInvokeResult(result);
+  }
+
   private async handleGetPagedProducts(): Promise<void> {
     const pager: Pager = {
       pageSize: 5,
@@ -141,7 +173,12 @@ class ConsoleApp {
   }
 
   private logInvokeResult(
-    result: Result<CreateAccountResponse | CreateProductResponse, BasicError>
+    result: Result<
+      | CreateAccountResponseContract
+      | CreateProductResponseContract
+      | CreateAccountWithProductsResponseContract,
+      BasicError
+    >,
   ): void {
     if (isOk(result)) {
       console.log('Invoke succeeded. Created entity:', result.value);
@@ -153,7 +190,7 @@ class ConsoleApp {
   }
 
   private logPagedProductsResult(
-    result: Result<PagerResult<Product>, BasicError>,
+    result: Result<PagerResult<ProductContract>, BasicError>,
   ): void {
     if (isOk(result)) {
       const { data, cursor } = result.value;
@@ -168,7 +205,7 @@ class ConsoleApp {
   }
 
   private logPagedAccountsResult(
-    result: Result<PagerResult<Account>, BasicError>,
+    result: Result<PagerResult<AccountContract>, BasicError>,
   ): void {
     if (isOk(result)) {
       const { data, cursor } = result.value;

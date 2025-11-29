@@ -1,4 +1,5 @@
 export * from "./serviceBus/index";
+export * from "./saga";
 export {
   ModuleLogger,
   LoggerFactory,
@@ -10,3 +11,4 @@ export {
   type ILogger,
   type RequestContextData,
 } from "./logging/index";
+export * from "./modules-integration";

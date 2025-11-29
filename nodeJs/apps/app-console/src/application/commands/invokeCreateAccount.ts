@@ -1,13 +1,13 @@
 import { Result, BasicError } from '@app/core';
 import {
-  CreateAccountCommand,
-  CreateAccountResponse,
   IAccountBaseFacade,
-} from '@app/accounts';
+  CreateAccountCommandContract,
+  CreateAccountResponseContract,
+} from '@app/core';
 
 export const invokeCreateAccount = async (
   facade: IAccountBaseFacade,
-  payload: CreateAccountCommand,
-): Promise<Result<CreateAccountResponse, BasicError>> => {
+  payload: CreateAccountCommandContract,
+): Promise<Result<CreateAccountResponseContract, BasicError>> => {
   return facade.invokeCreateAccount(payload, { via: 'inMemory' });
 };
