@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import { randomUUID } from 'node:crypto';
 import { inject, injectable } from 'inversify';
 import {
   Handler,
@@ -10,6 +9,7 @@ import {
   ok,
   basicErr,
   isErr,
+  SagaState,
 } from '@app/core';
 import {
   IAccountRepository,
@@ -19,11 +19,13 @@ import { AccountStatusEnum } from '../../../domain';
 import {
   AccountProductSaga,
   AccountProductSagaData,
+  AccountProductSagaTempData,
 } from '../sagas/accountProductSaga';
 import {
   IProductBaseFacade,
   PRODUCT_FACADE_TOKEN,
 } from '@app/core';
+import { ulid } from 'ulid';
 
 export const CREATE_ACCOUNT_WITH_PRODUCTS_COMMAND_TYPE =
   'account.createWithProducts';
@@ -68,10 +70,7 @@ export class CreateAccountWithProductsCommandHandler
   ): Promise<Result<CreateAccountWithProductsResponse, BasicError>> {
     const payload = env.payload;
 
-    const accountId = payload.account.id ?? randomUUID();
-    if (!payload.account.email || !payload.account.displayName) {
-      return basicErr('Invalid payload');
-    }
+    const accountId = payload.account.id ?? ulid();
 
     const accountStatus = AccountStatusEnum.parse(
       payload.account.status ?? AccountStatusEnum.enum.active,
@@ -79,14 +78,14 @@ export class CreateAccountWithProductsCommandHandler
 
     const products =
       payload.products?.map((p) => ({
-        id: p.id ?? randomUUID(),
+        id: p.id ?? ulid(),
         name: p.name,
         priceCents: p.priceCents,
       })) ?? [];
 
-    const commandId = payload.commandId ?? randomUUID();
+    const commandId = payload.commandId ?? ulid();
 
-    const sagaData: AccountProductSagaData = {
+    const sagaTempData: AccountProductSagaTempData = {
       account: {
         id: accountId,
         email: payload.account.email,
@@ -99,9 +98,9 @@ export class CreateAccountWithProductsCommandHandler
       productIds: [],
     };
 
-    let sagaStateResult = await this.saga.loadOrStartForCommand(
+    const sagaStateResult = await this.saga.startForCommand(
       commandId,
-      sagaData,
+      sagaTempData,
     );
     if (isErr(sagaStateResult)) {
       return sagaStateResult;
@@ -109,43 +108,36 @@ export class CreateAccountWithProductsCommandHandler
 
     let sagaState = sagaStateResult.value;
 
-    if (this.saga.isFinished(sagaState)) {
-      const result = this.saga.toResult(sagaState);
-      if (isErr(result)) {
-        return result;
-      }
-      return ok(result.value);
+    const sagaAccount = this.saga.sagaTempData?.account;
+    if (!sagaAccount) {
+      return basicErr('Saga missing account data');
     }
 
-    if (!sagaState.data.accountId) {
-      const createResult = await this.accountRepository.create({
-        id: sagaState.data.account.id,
-        email: sagaState.data.account.email,
-        displayName: sagaState.data.account.displayName,
-        role: sagaState.data.account.role,
-        status: sagaState.data.account.status,
-      });
+    const createResult = await this.accountRepository.create({
+      id: sagaAccount.id,
+      email: sagaAccount.email,
+      displayName: sagaAccount.displayName,
+      role: sagaAccount.role,
+      status: sagaAccount.status,
+    });
 
-      if (isErr(createResult)) {
-        const failure = await this.saga.markFailed(
-          sagaState,
-          createResult.error.message,
-        );
-        return isErr(failure) ? failure : createResult;
-      }
-
-      const saved = await this.saga.onAccountCreated(
-        sagaState,
-        createResult.value.id,
-      );
-      if (isErr(saved)) {
-        return saved;
-      }
-      sagaState = saved.value;
+    if (isErr(createResult)) {
+      return this.compensateAndFail(sagaState, createResult.error.message);
     }
 
-    const createdProductIds = new Set(sagaState.data.productIds ?? []);
-    for (const product of sagaState.data.products) {
+    const accountSaved = await this.saga.onAccountCreated(
+      sagaState,
+      createResult.value.id,
+    );
+    if (isErr(accountSaved)) {
+      return accountSaved;
+    }
+    sagaState = accountSaved.value;
+
+    const createdProductIds = new Set(this.saga.sagaTempData?.productIds ?? []);
+    const productsToCreate = this.saga.sagaTempData?.products ?? [];
+
+    for (const product of productsToCreate) {
       if (createdProductIds.has(product.id)) {
         continue;
       }
@@ -160,11 +152,7 @@ export class CreateAccountWithProductsCommandHandler
       );
 
       if (isErr(productResult)) {
-        const failure = await this.saga.markFailed(
-          sagaState,
-          productResult.error.message,
-        );
-        return isErr(failure) ? failure : productResult;
+        return this.compensateAndFail(sagaState, productResult.error.message);
       }
 
       const saved = await this.saga.onProductCreated(
@@ -189,5 +177,36 @@ export class CreateAccountWithProductsCommandHandler
     }
 
     return ok(result.value);
+  }
+
+  private async compensateAndFail(
+    saga: SagaState<AccountProductSagaData>,
+    reason: string,
+  ): Promise<Result<CreateAccountWithProductsResponse, BasicError>> {
+    const compensation = await this.saga.compensate(
+      saga,
+      reason,
+      {
+        compensateProducts: async () => {
+          const productIds = this.saga.sagaTempData?.productIds ?? [];
+          if (productIds.length === 0) {
+            return ok(undefined);
+          }
+          return basicErr('Product compensation not implemented');
+        },
+        compensateAccount: async () => {
+          if (!this.saga.sagaTempData?.accountId) {
+            return ok(undefined);
+          }
+          return basicErr('Account compensation not implemented');
+        },
+      },
+    );
+
+    if (isErr(compensation)) {
+      return compensation;
+    }
+
+    return basicErr(reason);
   }
 }

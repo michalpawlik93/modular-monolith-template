@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { ulid } from "ulid";
 
 export type RequestContextData = {
   requestId?: string;
@@ -16,3 +17,7 @@ export class RequestContext {
     return this.storage.getStore();
   }
 }
+
+  export const runWithContext = <T>(requestContext: RequestContext, fn: () => T | Promise<T>): T | Promise<T> => {
+    return requestContext.run({ requestId: ulid() }, fn);
+  };

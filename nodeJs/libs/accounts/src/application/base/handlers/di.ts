@@ -32,6 +32,6 @@ export const registerAccountsCommandHandlers = (container: Container) => {
   container
     .bind<Handler<CreateAccountWithProductsCommand>>(TYPES.Handler)
     .to(CreateAccountWithProductsCommandHandler)
-    .inSingletonScope()
+    .inRequestScope()
     .whenNamed(CREATE_ACCOUNT_WITH_PRODUCTS_COMMAND_TYPE);
 };

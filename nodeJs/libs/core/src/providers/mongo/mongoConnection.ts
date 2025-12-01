@@ -1,13 +1,8 @@
-import { inject, injectable } from 'inversify';
+import { injectable } from 'inversify';
 import { MongoClient, Db } from 'mongodb';
-import {
-  Result,
-  BasicError,
-  ok,
-  basicErr,
-} from '../../utils/result';
-import { MONGO_TOKENS, type MongoConfig } from './types';
-import { LoggerFactory, LOGGING_TYPES } from '../../features/logging';
+import { Result, BasicError, ok, basicErr } from '../../utils/result';
+import { type MongoConfig } from './types';
+import { LoggerFactory } from '../../features/logging';
 
 @injectable()
 export class MongoConnection {
@@ -16,8 +11,7 @@ export class MongoConnection {
   private readonly logger: ReturnType<LoggerFactory['forScope']>;
 
   constructor(
-    @inject(MONGO_TOKENS.MONGOCONFIG_KEY) private readonly config: MongoConfig,
-    @inject(LOGGING_TYPES.LoggerFactory)
+    private readonly config: MongoConfig,
     private readonly loggerFactory: LoggerFactory,
   ) {
     this.client = new MongoClient(config.uri);

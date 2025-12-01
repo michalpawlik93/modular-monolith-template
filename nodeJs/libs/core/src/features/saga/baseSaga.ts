@@ -1,18 +1,19 @@
 import { injectable } from 'inversify';
-import { BasicError, Result, isErr, ok } from '../../utils/result';
+import { BasicError, Result, basicErr, isErr } from '../../utils/result';
 import { MongoSagaRepository } from './saga.repository';
 import { SagaState, SagaStatus } from './saga.types';
 
 @injectable()
 export abstract class BaseSaga<Data = unknown> {
   protected abstract readonly type: string;
-  protected readonly defaultTtlDays = 30;
+  protected readonly defaultTtlSeconds = 60 * 60 * 24 * 30;
 
   constructor(protected readonly repo: MongoSagaRepository<Data>) {}
 
-  async loadOrStart(
+  async start(
     sagaId: string,
     initialData: Data,
+    firstStep: string,
   ): Promise<Result<SagaState<Data>, BasicError>> {
     const existingResult = await this.repo.findBySagaId(this.type, sagaId);
     if (isErr(existingResult)) {
@@ -20,29 +21,22 @@ export abstract class BaseSaga<Data = unknown> {
     }
 
     if (existingResult.value) {
-      return ok(existingResult.value);
+      return basicErr('Saga already started and is not resumable');
     }
 
     return this.repo.create({
       type: this.type,
       sagaId,
-      status: SagaStatus.NEW,
+      status: SagaStatus.RUNNING,
+      currentStep: firstStep,
       data: initialData,
-      expiresAt: this.computeExpiresAt(),
+      ttl: this.defaultTtlSeconds,
+      expiresAt: this.computeExpiresAt(this.defaultTtlSeconds),
     });
   }
 
-  isFinished(saga: SagaState<Data>): boolean {
-    return (
-      saga.status === SagaStatus.COMPLETED || saga.status === SagaStatus.FAILED
-    );
-  }
-
-  protected computeExpiresAt(): Date {
-    const now = new Date();
-    const expires = new Date(now);
-    expires.setDate(now.getDate() + this.defaultTtlDays);
-    return expires;
+  protected computeExpiresAt(ttlSeconds: number): Date {
+    return new Date(Date.now() + ttlSeconds * 1000);
   }
 
   protected async updateState(
@@ -50,15 +44,56 @@ export abstract class BaseSaga<Data = unknown> {
     update: {
       status?: SagaStatus;
       data?: Partial<Data>;
+      currentStep?: string;
       expiresAt?: Date;
     },
   ): Promise<Result<SagaState<Data>, BasicError>> {
+    const currentData = saga.data ?? ({} as Data);
     const next: SagaState<Data> = {
       ...saga,
       status: update.status ?? saga.status,
-      data: update.data ? { ...saga.data, ...update.data } : saga.data,
+      currentStep: update.currentStep ?? saga.currentStep,
+      data: update.data ? { ...currentData, ...update.data } : saga.data,
       expiresAt: update.expiresAt ?? saga.expiresAt,
     };
     return this.repo.save(next);
+  }
+
+  protected async markStep(
+    saga: SagaState<Data>,
+    step: string,
+    data?: Partial<Data>,
+  ): Promise<Result<SagaState<Data>, BasicError>> {
+    return this.updateState(saga, { currentStep: step, data });
+  }
+
+  protected async markSuccess(
+    saga: SagaState<Data>,
+    data?: Partial<Data>,
+  ): Promise<Result<SagaState<Data>, BasicError>> {
+    return this.updateState(saga, {
+      status: SagaStatus.SUCCESS,
+      data,
+    });
+  }
+
+  protected async markCompensated(
+    saga: SagaState<Data>,
+    data?: Partial<Data>,
+  ): Promise<Result<SagaState<Data>, BasicError>> {
+    return this.updateState(saga, {
+      status: SagaStatus.COMPENSATED,
+      data,
+    });
+  }
+
+  protected async markFailed(
+    saga: SagaState<Data>,
+    data?: Partial<Data>,
+  ): Promise<Result<SagaState<Data>, BasicError>> {
+    return this.updateState(saga, {
+      status: SagaStatus.FAILED,
+      data,
+    });
   }
 }

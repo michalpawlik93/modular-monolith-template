@@ -1,8 +1,9 @@
 import { Container } from "inversify";
+import type { ServiceIdentifier } from "@inversifyjs/common";
 
 export const bindOrRebind = (
     container: Container,
-    identifier: symbol,
+    identifier: ServiceIdentifier<unknown>,
     binder: () => void
   ) => {
     if (container.isBound(identifier)) {
@@ -16,13 +17,21 @@ export const bindOrRebind = (
  */
 type ContainerWithNamedExtensions = Container & {
   isBoundNamed?: (
-    id: unknown,
+    id: ServiceIdentifier<unknown>,
     named: string | number | symbol,
   ) => boolean;
   getNamed?: <TResult>(
-    id: unknown,
+    id: ServiceIdentifier<unknown>,
     named: string | number | symbol,
   ) => TResult;
+};
+
+// Some Inversify distributions expose `get`/`isBound` overloads that accept
+// a metadata object like `{ name: ... }`. We declare a local interface to
+// describe those overloads so we can call them without using `any`.
+type NamedGet = {
+  isBound<T>(id: ServiceIdentifier<T>, named: { name: string | number | symbol }): boolean;
+  get<T>(id: ServiceIdentifier<T>, named: { name: string | number | symbol }): T;
 };
 
 /**
@@ -39,8 +48,8 @@ export function isHandlerBound(
   if (typeof containerWithExtensions.isBoundNamed === 'function') {
     return containerWithExtensions.isBoundNamed(handlerType, commandType);
   }
-  
-  return container.isBound(handlerType, { name: commandType });
+
+  return (container as Container & NamedGet).isBound(handlerType, { name: commandType });
 }
 
 /**
@@ -57,6 +66,6 @@ export function getHandler<T>(
   if (typeof containerWithExtensions.getNamed === 'function') {
     return containerWithExtensions.getNamed<T>(handlerType, commandType);
   }
-  
-  return container.get<T>(handlerType, { name: commandType });
+
+  return (container as Container & NamedGet).get<T>(handlerType, { name: commandType });
 }

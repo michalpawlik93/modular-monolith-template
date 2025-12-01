@@ -1,5 +1,5 @@
-import { inject, injectable, optional } from 'inversify';
-import { Collection, Db, ObjectId, ModifyResult, WithId } from 'mongodb';
+import { injectable } from 'inversify';
+import { Collection } from 'mongodb';
 import {
   BasicError,
   Result,
@@ -9,34 +9,29 @@ import {
   isOk,
   isErr,
 } from '../../utils/result';
-import { MONGO_TOKENS } from '../../providers/mongo';
 import { SagaState, SagaStatus, SAGA_COLLECTION_NAME } from './saga.types';
+import { MongoConnection } from '../../providers/mongo';
 
 const getErrorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-const normalizeId = (value: unknown): string =>
-  typeof value === 'string' ? value : new ObjectId(value as any).toHexString();
+type SagaDocument<Data = unknown> = Omit<SagaState<Data>, 'data'>;
 
 @injectable()
 export class MongoSagaRepository<Data = unknown> {
-  private readonly collection: Collection<SagaState<Data>>;
+  private readonly collection: Collection<SagaDocument<Data>>;
 
   constructor(
-    @inject(MONGO_TOKENS.MONGODB_KEY) db: Db,
-    @optional() collectionName?: string,
+    connection: MongoConnection,
+    collectionName?: string,
   ) {
-    this.collection = db.collection<SagaState<Data>>(
+    this.collection = connection.client.db().collection<SagaDocument<Data>>(
       collectionName ?? SAGA_COLLECTION_NAME,
     );
   }
 
   async ensureIndexes(): Promise<Result<null, BasicError>> {
     try {
-      await this.collection.createIndex(
-        { type: 1, sagaId: 1 },
-        { unique: true },
-      );
       await this.collection.createIndex(
         { expiresAt: 1 },
         { expireAfterSeconds: 0 },
@@ -54,7 +49,7 @@ export class MongoSagaRepository<Data = unknown> {
     sagaId: string,
   ): Promise<Result<SagaState<Data> | null, BasicError>> {
     try {
-      const doc = await this.collection.findOne({ type, sagaId });
+      const doc = await this.collection.findOne({ _id: sagaId, type });
       if (!doc) {
         return ok(null);
       }
@@ -71,24 +66,29 @@ export class MongoSagaRepository<Data = unknown> {
     sagaId: string;
     status: SagaStatus;
     data: Data;
+    currentStep?: string;
+    ttl: number;
     expiresAt?: Date;
   }): Promise<Result<SagaState<Data>, BasicError>> {
     const now = new Date();
-    const document: SagaState<Data> = {
-      _id: new ObjectId().toHexString(),
+    const expiresAt =
+      initial.expiresAt ?? new Date(now.getTime() + initial.ttl * 1000);
+    const document: SagaDocument<Data> = {
+      _id: initial.sagaId,
       type: initial.type,
-      sagaId: initial.sagaId,
       status: initial.status,
-      data: initial.data,
+      currentStep: initial.currentStep,
+      ttl: initial.ttl,
       version: 0,
       createdAt: now,
       updatedAt: now,
-      expiresAt: initial.expiresAt,
+      expiresAt,
+      tempData: null,
     };
 
     try {
       await this.collection.insertOne(document);
-      return ok(document);
+      return ok(this.mapToState(document, initial.data));
     } catch (error) {
       const errorMessage = getErrorMessage(error);
       if (errorMessage.includes('duplicate key')) {
@@ -106,29 +106,32 @@ export class MongoSagaRepository<Data = unknown> {
 
   async save(state: SagaState<Data>): Promise<Result<SagaState<Data>, BasicError>> {
     try {
+      console.log(`Saving saga ${state._id} (type=${state.type},version =${state.version}, data=${JSON.stringify(state.data)})`);
       const now = new Date();
+      const expiresAt =
+        state.expiresAt ?? new Date(now.getTime() + state.ttl * 1000);
       const result = await this.collection.findOneAndUpdate(
-        { _id: state._id, version: state.version },
+        { _id: state._id, type: state.type, version: state.version },
         {
           $set: {
             status: state.status,
-            data: state.data,
+            currentStep: state.currentStep,
+            ttl: state.ttl,
             updatedAt: now,
-            expiresAt: state.expiresAt,
+            expiresAt,
           },
           $inc: { version: 1 },
         },
         { returnDocument: 'after' },
       );
-
-      const updated = (result as unknown as ModifyResult<SagaState<Data>>).value;
+      const updated = result as SagaDocument<Data> | null;
       if (!updated) {
         return notFoundErr(
           `Optimistic lock error for saga ${state._id} (type=${state.type})`,
         );
       }
 
-      return ok(this.mapToState(updated));
+      return ok(this.mapToState(updated, state.data));
     } catch (error) {
       return basicErr(
         `Failed to update saga ${state._id}: ${getErrorMessage(error)}`,
@@ -136,10 +139,13 @@ export class MongoSagaRepository<Data = unknown> {
     }
   }
 
-  private mapToState(doc: SagaState<Data> | WithId<SagaState<Data>>): SagaState<Data> {
+  private mapToState(
+    doc: SagaDocument<Data>,
+    data?: Data,
+  ): SagaState<Data> {
     return {
       ...doc,
-      _id: normalizeId(doc._id),
+      data,
     };
   }
 }

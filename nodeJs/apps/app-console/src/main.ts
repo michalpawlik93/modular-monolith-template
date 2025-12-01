@@ -1,48 +1,50 @@
 import 'reflect-metadata';
-import { Container } from "inversify";
-import { cleanConnections, setupConnections, setupContainer } from "./di";
+import { ACCOUNT_FACADE_TOKEN, cleanConnections, IAccountBaseFacade, IProductBaseFacade, ModuleContainer, PRODUCT_FACADE_TOKEN, setupConnections, runWithContext } from "@app/core";
+import { setupContainer } from "./di";
 import { runConsole } from "./application/console";
 
-let container: Container | null = null;
+let modules: ModuleContainer[] | null = null;
 
 async function main() {
     const {
-      container: containerInstance,
-      runWithContext,
+      modules: moduleInstances,
+      requestContext,
     } = await setupContainer();
-    container = containerInstance;
-    await setupConnections(containerInstance);
-    await runWithContext(async () => {
-      await runConsole(containerInstance);
+    modules = Object.values(moduleInstances);
+    await setupConnections(modules);
+    const accountFacade = moduleInstances.accounts.container.get<IAccountBaseFacade>(ACCOUNT_FACADE_TOKEN);
+    const productFacade = moduleInstances.products.container.get<IProductBaseFacade>(PRODUCT_FACADE_TOKEN);
+    await runWithContext(requestContext,async () => {
+      await runConsole({ accountFacade, productFacade });
     });
 }
 
 process.on('uncaughtException', async (error) => {
   console.error('Uncaught Exception:', error);
-  await cleanConnections(container);
+  await cleanConnections(modules ?? undefined);
   process.exit(1);
 });
 
 process.on('unhandledRejection', async (reason, promise) => {
   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  await cleanConnections(container);
+  await cleanConnections(modules ?? undefined);
   process.exit(1);
 });
 
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully...');
-  await cleanConnections(container);
+  await cleanConnections(modules ?? undefined);
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully...');
-  await cleanConnections(container);
+  await cleanConnections(modules ?? undefined);
   process.exit(0);
 });
 
 main().catch(async (error) => {
   console.error('Fatal error in main:', error);
-  await cleanConnections(container);
+  await cleanConnections(modules ?? undefined);
   process.exit(1);
 });

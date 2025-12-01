@@ -1,12 +1,9 @@
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
-import { Container } from 'inversify';
 import { isOk, BasicError, Result, Pager, PagerResult, CreateAccountCommandContract, CreateProductCommandContract, CreateAccountWithProductsCommandContract, CreateAccountResponseContract, CreateProductResponseContract, CreateAccountWithProductsResponseContract, ProductContract, AccountContract } from '@app/core';
 import {
   IAccountBaseFacade,
-  ACCOUNT_FACADE_TOKEN,
   IProductBaseFacade,
-  PRODUCT_FACADE_TOKEN,
 } from '@app/core';
 import { invokeCreateAccount } from './commands/invokeCreateAccount';
 import { invokeCreateAccountGrpc } from './commands/invokeCreateAccountGrpc';
@@ -16,17 +13,10 @@ import { invokeGetPagedProducts } from './commands/invokeGetPagedProducts';
 import { invokeCreateAccountWithProducts } from './commands/invokeCreateAccountWithProducts';
 
 class ConsoleApp {
-  private readonly accountFacade: IAccountBaseFacade;
-  private readonly productFacade: IProductBaseFacade;
-
-  constructor(container: Container) {
-    this.accountFacade = container.get<IAccountBaseFacade>(
-      ACCOUNT_FACADE_TOKEN,
-    );
-    this.productFacade = container.get<IProductBaseFacade>(
-      PRODUCT_FACADE_TOKEN,
-    );
-  }
+  constructor(
+    private readonly accountFacade: IAccountBaseFacade,
+    private readonly productFacade: IProductBaseFacade,
+  ) {}
 
   async run(): Promise<void> {
     const rl = createInterface({ input, output });
@@ -220,7 +210,10 @@ class ConsoleApp {
   }
 }
 
-export const runConsole = async (container: Container): Promise<void> => {
-  const app = new ConsoleApp(container);
+export const runConsole = async (params: {
+  accountFacade: IAccountBaseFacade;
+  productFacade: IProductBaseFacade;
+}): Promise<void> => {
+  const app = new ConsoleApp(params.accountFacade, params.productFacade);
   await app.run();
 };

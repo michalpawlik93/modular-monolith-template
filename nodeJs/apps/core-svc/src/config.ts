@@ -19,19 +19,45 @@ const environment = loadEnvironment('core-svc');
 
 export const resolveLogLevel = (value?: string | null) => resolveLogLevelValue(environment, value);
 
-export const buildLoggerConfig = (): LoggerConfig => ({
+const LOGS_DIRECTORY = 'logs/core-svc';
+
+const buildModuleLoggerConfig = (
+  moduleName: string,
+  filePath?: string | null,
+): LoggerConfig => ({
   level: resolveLogLevelValue(environment, process.env.LOG_LEVEL),
-  filePath: resolveLogFilePath('core-svc', process.env.LOG_FILE_PATH),
+  filePath: resolveLogFilePath(moduleName, filePath, { logsDirectory: LOGS_DIRECTORY }),
   prettyInDev: environment !== 'production',
 });
+
+export const buildAccountsLoggerConfig = (): LoggerConfig =>
+  buildModuleLoggerConfig('accounts', process.env.ACCOUNTS_LOG_FILE_PATH);
+
+export const buildProductsLoggerConfig = (): LoggerConfig =>
+  buildModuleLoggerConfig('products', process.env.PRODUCTS_LOG_FILE_PATH);
+
+export const buildCoreLoggerConfig = (): LoggerConfig =>
+  buildModuleLoggerConfig('core', process.env.CORE_LOG_FILE_PATH ?? process.env.LOG_FILE_PATH);
+
+export const buildGrpcServerLoggerConfig = (): LoggerConfig =>
+  buildModuleLoggerConfig('core-grpc-server', process.env.CORE_SERVER_LOG_FILE_PATH ?? process.env.LOG_FILE_PATH);
 
 export const getEnvironment = (): string => environment;
 
 export const getGrpcServerAddress = (): string => process.env.GRPC_SERVER_ADDRESS ;
 
-export const buildMongoConfig = (): MongoConfig => ({
-  uri: process.env.MONGO_URI ?? 'mongodb://localhost:27017/core',
+const buildMongoConfig = (uri: string | undefined, fallback: string): MongoConfig => ({
+  uri: uri?.trim() || fallback,
 });
+
+export const buildAccountsMongoConfig = (): MongoConfig =>
+  buildMongoConfig(process.env.ACCOUNTS_MONGO_URI, 'mongodb://localhost:27017/accounts');
+
+export const buildProductsMongoConfig = (): MongoConfig =>
+  buildMongoConfig(process.env.PRODUCTS_MONGO_URI, 'mongodb://localhost:27017/products');
+
+export const buildCoreMongoConfig = (): MongoConfig =>
+  buildMongoConfig(process.env.CORE_MONGO_URI, 'mongodb://localhost:27017/core');
 
 
 export const buildGrpcServerConfig = (): GrpcServerConfig => ({

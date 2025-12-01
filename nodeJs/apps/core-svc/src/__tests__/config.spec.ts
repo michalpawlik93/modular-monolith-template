@@ -32,15 +32,15 @@ describe('core-svc config', () => {
     });
   });
 
-  it('builds logger config using env overrides', () => {
+  it('builds grpc server logger config using env overrides', () => {
     withConfigModule(
       {
         NODE_ENV: 'production',
         LOG_LEVEL: 'error',
-        LOG_FILE_PATH: 'logs/core-svc.log',
+        CORE_SERVER_LOG_FILE_PATH: 'logs/core-svc.log',
       },
-      ({ buildLoggerConfig }) => {
-        const config = buildLoggerConfig();
+      ({ buildGrpcServerLoggerConfig }) => {
+        const config = buildGrpcServerLoggerConfig();
 
         expect(config.level).toBe('error');
         expect(config.filePath).toBe(

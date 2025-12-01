@@ -32,15 +32,15 @@ describe('app-console config', () => {
     });
   });
 
-  it('builds logger config using provided env overrides', () => {
+  it('builds accounts logger config using provided env overrides', () => {
     withConfigModule(
       {
         NODE_ENV: 'production',
         LOG_LEVEL: 'warn',
-        LOG_FILE_PATH: 'logs/custom.log',
+        ACCOUNTS_LOG_FILE_PATH: 'logs/custom.log',
       },
-      ({ buildLoggerConfig }) => {
-        const config = buildLoggerConfig();
+      ({ buildAccountsLoggerConfig }) => {
+        const config = buildAccountsLoggerConfig();
 
         expect(config.level).toBe('warn');
         expect(config.filePath).toBe(path.join(process.cwd(), 'logs/custom.log'));

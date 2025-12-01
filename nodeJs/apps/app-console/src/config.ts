@@ -18,17 +18,43 @@ const environment = loadEnvironment('app-console');
 
 export const resolveLogLevel = (value?: string | null) => resolveLogLevelValue(environment, value);
 
-export const buildLoggerConfig = (): LoggerConfig => ({
+const LOGS_DIRECTORY = 'logs/app-console';
+
+const buildModuleLoggerConfig = (
+  moduleName: string,
+  filePath?: string | null,
+): LoggerConfig => ({
   level: resolveLogLevelValue(environment, process.env.LOG_LEVEL),
-  filePath: resolveLogFilePath('app-console', process.env.LOG_FILE_PATH, { allowAbsolute: true }),
+  filePath: resolveLogFilePath(moduleName, filePath, {
+    allowAbsolute: true,
+    logsDirectory: LOGS_DIRECTORY,
+  }),
   prettyInDev: environment !== 'production',
 });
 
+export const buildAccountsLoggerConfig = (): LoggerConfig =>
+  buildModuleLoggerConfig('accounts', process.env.ACCOUNTS_LOG_FILE_PATH);
+
+export const buildProductsLoggerConfig = (): LoggerConfig =>
+  buildModuleLoggerConfig('products', process.env.PRODUCTS_LOG_FILE_PATH);
+
+export const buildCoreLoggerConfig = (): LoggerConfig =>
+  buildModuleLoggerConfig('core', process.env.CORE_LOG_FILE_PATH ?? process.env.LOG_FILE_PATH);
+
 export const getEnvironment = (): string => environment;
 
-export const buildMongoConfig = (): MongoConfig => ({
-  uri: process.env.MONGO_URI ?? 'mongodb://localhost:27017/app',
+const buildMongoConfig = (uri: string | undefined, fallback: string): MongoConfig => ({
+  uri: uri?.trim() || fallback,
 });
+
+export const buildAccountsMongoConfig = (): MongoConfig =>
+  buildMongoConfig(process.env.ACCOUNTS_MONGO_URI, 'mongodb://localhost:27017/accounts');
+
+export const buildProductsMongoConfig = (): MongoConfig =>
+  buildMongoConfig(process.env.PRODUCTS_MONGO_URI, 'mongodb://localhost:27017/products');
+
+export const buildCoreMongoConfig = (): MongoConfig =>
+  buildMongoConfig(process.env.CORE_MONGO_URI, 'mongodb://localhost:27017/core');
 
 export const buildGrpcRoutingConfig = (): GrpcRoutingConfig => ({
   modules: {

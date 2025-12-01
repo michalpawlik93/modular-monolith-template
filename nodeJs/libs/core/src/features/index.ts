@@ -10,5 +10,6 @@ export {
   type LoggerConfig,
   type ILogger,
   type RequestContextData,
+  runWithContext
 } from "./logging/index";
 export * from "./modules-integration";

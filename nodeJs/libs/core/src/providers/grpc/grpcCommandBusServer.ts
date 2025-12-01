@@ -1,5 +1,11 @@
 import * as grpc from '@grpc/grpc-js';
-import { injectable, inject, Container, optional } from 'inversify';
+import {
+  injectable,
+  inject,
+  Container,
+  optional,
+  multiInject,
+} from 'inversify';
 import { loadBusProto } from './protoLoader';
 import {
   Envelope as CoreEnvelope,
@@ -7,6 +13,7 @@ import {
   TYPES,
   noHandlerErr,
 } from '../../features/serviceBus/serviceBus';
+import { GRPC_HANDLER_CONTAINER_TOKEN } from './di';
 import {
   BasicError,
   Result,
@@ -38,6 +45,9 @@ export class GrpcCommandBusServer {
     @inject(GRPC_SERVER_CONFIG_TOKEN)
     @optional()
     private readonly serverConfig?: GrpcServerConfig,
+    @multiInject(GRPC_HANDLER_CONTAINER_TOKEN)
+    @optional()
+    private readonly handlerContainers: Container[] = [],
   ) {}
 
   private buildServerOptions(): grpc.ServerOptions {
@@ -61,6 +71,13 @@ export class GrpcCommandBusServer {
     return options;
   }
 
+  private resolveHandlerContainer(type: string): Container | undefined {
+    const containers = [this.container, ...(this.handlerContainers ?? [])];
+    return containers.find((candidate) =>
+      isHandlerBound(candidate, TYPES.Handler, type),
+    );
+  }
+
   async start(address: string): Promise<void> {
     if (this.server) {
       return;
@@ -82,16 +99,17 @@ export class GrpcCommandBusServer {
           const env: CoreEnvelope = {
             type: call.request.type,
             payload: parsedPayload,
-            meta: call.request.meta ?? {},
+        meta: call.request.meta ?? {},
           };
 
-          if (!isHandlerBound(this.container, TYPES.Handler, env.type)) {
+          const handlerContainer = this.resolveHandlerContainer(env.type);
+          if (!handlerContainer) {
             const result = noHandlerErr(env.type);
             return callback(null, toGrpcResult(result));
           }
 
           const handler = getHandler<Handler>(
-            this.container,
+            handlerContainer,
             TYPES.Handler,
             env.type,
           );

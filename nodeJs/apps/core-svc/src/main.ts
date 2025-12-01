@@ -1,16 +1,22 @@
 import 'reflect-metadata';
-import { GrpcCommandBusServer } from '@app/core';
+import { cleanConnections, GrpcCommandBusServer, ModuleContainer, setupConnections } from '@app/core';
 import {
-  container,
-  connectInfrastructure,
-  disconnectInfrastructure,
+  setupContainer,
 } from './di';
 import { getGrpcServerAddress } from './config';
 
-async function main(): Promise<void> {
-  await connectInfrastructure();
 
-  const server = container.get(GrpcCommandBusServer);
+let modules: ModuleContainer[] | null = null;
+
+async function main(): Promise<void> {
+    const {
+      modules: moduleInstances,
+      appContainer
+    } = await setupContainer();
+    modules = Object.values(moduleInstances);
+    await setupConnections(modules);
+
+  const server = appContainer.get(GrpcCommandBusServer);
   const address = getGrpcServerAddress();
   await server.start(address);
 
@@ -29,7 +35,7 @@ async function main(): Promise<void> {
     }
 
     try {
-      await disconnectInfrastructure();
+      await cleanConnections();
     } catch (error) {
       console.error('Error disconnecting infrastructure:', error);
       exitCode = exitCode || 1;
@@ -57,6 +63,6 @@ async function main(): Promise<void> {
 
 main().catch(async (error) => {
   console.error('Fatal error during startup:', error);
-  await disconnectInfrastructure();
+  await cleanConnections();
   process.exit(1);
 });

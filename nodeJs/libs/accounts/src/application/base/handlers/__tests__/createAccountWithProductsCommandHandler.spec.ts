@@ -30,7 +30,7 @@ class FakeSagaRepo {
   }
 
   async findBySagaId(type: string, sagaId: string) {
-    if (this.state && this.state.type === type && this.state.sagaId === sagaId) {
+    if (this.state && this.state.type === type && this.state._id === sagaId) {
       return ok(this.state);
     }
     return ok(null);
@@ -41,14 +41,17 @@ class FakeSagaRepo {
     sagaId: string;
     status: SagaStatus;
     data: any;
+    currentStep?: string;
+    ttl: number;
     expiresAt?: Date;
   }) {
     this.state = {
-      _id: randomUUID(),
+      _id: initial.sagaId,
       type: initial.type,
-      sagaId: initial.sagaId,
       status: initial.status,
       data: initial.data,
+      currentStep: initial.currentStep,
+      ttl: initial.ttl,
       version: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -126,7 +129,7 @@ describe('CreateAccountWithProductsCommandHandler', () => {
       expect(result.value.accountId).toBe('acc-1');
       expect(result.value.productIds).toEqual(['prod-1']);
     }
-    expect(repo.state?.status).toBe(SagaStatus.COMPLETED);
+    expect(repo.state?.status).toBe(SagaStatus.SUCCESS);
   });
 
   it('marks saga failed when account creation fails', async () => {
@@ -143,6 +146,6 @@ describe('CreateAccountWithProductsCommandHandler', () => {
     const result = await handler.handle({ type: '', payload: buildCommand() });
 
     expect(isErr(result)).toBe(true);
-    expect(repo.state?.status).toBe(SagaStatus.FAILED);
+    expect(repo.state?.status).toBe(SagaStatus.COMPENSATED);
   });
 });
