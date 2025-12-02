@@ -4,9 +4,9 @@ import {
   BasicError,
   ok,
   basicErr,
-  notFoundErr,
   Pager,
   PagerResult,
+  getErrorMessage,
 } from '@app/core';
 import { Account, AccountStatusEnum } from '../../domain/models/account';
 import { accountsDb, runInAccountsTx } from './tx';
@@ -23,6 +23,7 @@ export interface IAccountRepository {
     id: string,
     update: Partial<Omit<Account, 'id' | 'createdAt' | 'updatedAt'>>,
   ) => Promise<Result<Account, BasicError>>;
+  delete: (id: string) => Promise<Result<Account, BasicError>>;
 }
 
 export const ACCOUNT_REPOSITORY_KEY = Symbol.for('IAccountRepository');
@@ -44,9 +45,6 @@ const toDomain = (account: {
   createdAt: account.createdAt,
   updatedAt: account.updatedAt,
 });
-
-const getErrorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 @injectable()
 export class AccountRepository implements IAccountRepository {
@@ -163,8 +161,19 @@ export class AccountRepository implements IAccountRepository {
 
       return ok(toDomain(updated));
     } catch (error) {
-      return notFoundErr(
-        `Account with id ${id} not found: ${getErrorMessage(error)}`,
+      return basicErr(
+        `Error when updating account with id ${id}: ${getErrorMessage(error)}`,
+      );
+    }
+  }
+
+  async delete(id: string): Promise<Result<Account, BasicError>> {
+    try {
+      const deleted = await this.db.account.delete({ where: { id } });
+      return ok(toDomain(deleted));
+    } catch (error) {
+      return basicErr(
+        `Failed to delete account ${id}: ${getErrorMessage(error)}`,
       );
     }
   }

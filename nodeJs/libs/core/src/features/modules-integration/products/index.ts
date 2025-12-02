@@ -18,6 +18,14 @@ export interface CreateProductResponseContract {
   id: string;
 }
 
+export interface DeleteProductCommandContract {
+  id: string;
+}
+
+export interface DeleteProductResponseContract {
+  id: string;
+}
+
 export interface ProductContract {
   id: string;
   name: string;
@@ -29,6 +37,10 @@ export interface IProductBaseFacade {
     payload: CreateProductCommandContract,
     opts?: { via?: Transport },
   ): Promise<Result<CreateProductResponseContract, BasicError>>;
+  invokeDeleteProduct(
+    payload: DeleteProductCommandContract,
+    opts?: { via?: Transport },
+  ): Promise<Result<DeleteProductResponseContract, BasicError>>;
   getPagedProducts(
     pager: Pager,
     opts?: { via?: Transport },

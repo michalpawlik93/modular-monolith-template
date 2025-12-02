@@ -37,14 +37,6 @@ export const connectCoreInfrastructure = async (
     console.error(result.error.message);
     return;
   }
-
-  if (container.isBound(CORE_SAGA_REPOSITORY)) {
-    const sagaRepo = container.get<MongoSagaRepository>(CORE_SAGA_REPOSITORY);
-    const indexResult = await sagaRepo.ensureIndexes();
-    if (isErr(indexResult)) {
-      console.error(indexResult.error.message);
-    }
-  }
 };
 
 export const disconnectCoreInfrastructure = async (

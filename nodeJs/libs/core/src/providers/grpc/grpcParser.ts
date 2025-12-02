@@ -1,15 +1,5 @@
 import { BaseCommand } from '../../features/serviceBus/serviceBus';
 
-/**
- * Parses gRPC payload buffer to object.
- * 
- * Note: Parsing to JSON is necessary because:
- * - gRPC transmits data as Buffer/Uint8Array
- * - Envelope<T> requires payload: T where T extends BaseCommand (Record<string, unknown>)
- * - Handlers expect object payload, not raw buffer
- * 
- * This conversion cannot be avoided without changing the entire serviceBus architecture.
- */
 export function parseGrpcPayload<T = Record<string, unknown>>(
   payload: Buffer | Uint8Array | null | undefined,
 ): T | null {

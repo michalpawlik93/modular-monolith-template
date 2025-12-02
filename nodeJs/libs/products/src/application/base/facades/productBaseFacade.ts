@@ -14,6 +14,8 @@ import {
   IProductBaseFacade,
   CreateProductCommandContract,
   CreateProductResponseContract,
+  DeleteProductCommandContract,
+  DeleteProductResponseContract,
   ProductContract,
 } from '@app/core';
 import {
@@ -22,10 +24,16 @@ import {
   CreateProductResponse,
 } from '../handlers/createProductCommandHandler';
 import {
+  DELETE_PRODUCT_COMMAND_TYPE,
+  DeleteProductCommand,
+  DeleteProductResponse,
+} from '../handlers/deleteProductCommandHandler';
+import {
   GET_PAGED_PRODUCTS_COMMAND,
   GetPagedProductsCommand,
 } from '../handlers/getPagedProductsCommandHandler';
 import { Product } from '../../../domain/models/product';
+import { ulid } from 'ulid';
 
 @injectable()
 export class ProductBaseFacade
@@ -48,11 +56,34 @@ export class ProductBaseFacade
     const envelope: Envelope<CreateProductCommand> = {
       type: CREATE_PRODUCT_COMMAND_TYPE,
       payload: payload as CreateProductCommand,
+      meta: {commandId: ulid()},
     };
 
     return busResult.value.invoke<CreateProductCommand, CreateProductResponse>(
       envelope,
     );
+  }
+
+  async invokeDeleteProduct(
+    payload: DeleteProductCommandContract,
+    opts?: { via?: Transport },
+  ): Promise<Result<DeleteProductResponseContract, BasicError>> {
+    const busResult = this.resolveBus(opts?.via);
+
+    if (isErr(busResult)) {
+      return busResult;
+    }
+
+    const envelope: Envelope<DeleteProductCommand> = {
+      type: DELETE_PRODUCT_COMMAND_TYPE,
+      payload: payload as DeleteProductCommand,
+      meta: { commandId: ulid() },
+    };
+
+    return busResult.value.invoke<
+      DeleteProductCommand,
+      DeleteProductResponse
+    >(envelope);
   }
 
   async getPagedProducts(
@@ -68,6 +99,7 @@ export class ProductBaseFacade
     const envelope: Envelope<GetPagedProductsCommand> = {
       type: GET_PAGED_PRODUCTS_COMMAND,
       payload: { pager },
+      meta: {commandId: ulid()},
     };
 
     return busResult.value.invoke<

@@ -8,6 +8,7 @@ import {
   basicErr,
   Pager,
   PagerResult,
+  getErrorMessage,
 } from '@app/core';
 import { Product } from '../../domain/models/product';
 
@@ -39,9 +40,6 @@ const toDomain = (record: {
   createdAt: record.createdAt,
   updatedAt: record.updatedAt,
 });
-
-const getErrorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
 
 @injectable()
 export class ProductsRepository implements IProductsRepository {
@@ -87,7 +85,7 @@ export class ProductsRepository implements IProductsRepository {
       });
       return ok(toDomain(updated));
     } catch (error) {
-      return notFoundErr(`Failed to update product ${id}: ${getErrorMessage(error)}`);
+      return basicErr(`Failed to update product ${id}: ${getErrorMessage(error)}`);
     }
   }
 
@@ -96,7 +94,7 @@ export class ProductsRepository implements IProductsRepository {
       const deleted = await this.db.product.delete({ where: { id } });
       return ok(toDomain(deleted));
     } catch (error) {
-      return notFoundErr(`Failed to delete product ${id}: ${getErrorMessage(error)}`);
+      return basicErr(`Failed to delete product ${id}: ${getErrorMessage(error)}`);
     }
   }
 

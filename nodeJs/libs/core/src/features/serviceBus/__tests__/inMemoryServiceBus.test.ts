@@ -60,6 +60,7 @@ describe('InMemoryServiceBus', () => {
     const envelope: Envelope<TestCommand> = {
       type: TEST_COMMAND_TYPE,
       payload: { data: 'testData' },
+    meta: { commandId: 'cmd-1' }
     };
 
     const result = await serviceBus.invoke<TestCommand, { result: string }>(
@@ -76,6 +77,7 @@ describe('InMemoryServiceBus', () => {
     const envelope: Envelope<TestCommand> = {
       type: TEST_COMMAND_TYPE,
       payload: { data: 'testData' },
+          meta: { commandId: 'cmd-1' }
     };
 
     const result = await serviceBus.invoke<TestCommand, { result: string }>(
@@ -91,6 +93,7 @@ describe('InMemoryServiceBus', () => {
     const envelope: Envelope<TestCommand> = {
       type: TEST_COMMAND_TYPE,
       payload: { data: 'testData' },
+          meta: { commandId: 'cmd-1' }
     };
 
     const result = await serviceBus.invoke<TestCommand, { result: string }>(

@@ -1,5 +1,5 @@
 import { injectable } from 'inversify';
-import { BasicError, Result, basicErr, isErr } from '../../utils/result';
+import { BasicError, Result, basicErr, isErr, isNotFound } from '../../utils/result';
 import { MongoSagaRepository } from './saga.repository';
 import { SagaState, SagaStatus } from './saga.types';
 
@@ -15,24 +15,25 @@ export abstract class BaseSaga<Data = unknown> {
     initialData: Data,
     firstStep: string,
   ): Promise<Result<SagaState<Data>, BasicError>> {
-    const existingResult = await this.repo.findBySagaId(this.type, sagaId);
+    const existingResult = await this.repo.findBySagaId(sagaId);
+
+    if(isNotFound(existingResult)) {
+      return this.repo.create({
+        type: this.type,
+        sagaId,
+        status: SagaStatus.RUNNING,
+        currentStep: firstStep,
+        data: initialData,
+        ttl: this.defaultTtlSeconds,
+        expiresAt: this.computeExpiresAt(this.defaultTtlSeconds),
+      });
+    }
+
     if (isErr(existingResult)) {
       return existingResult;
     }
 
-    if (existingResult.value) {
-      return basicErr('Saga already started and is not resumable');
-    }
-
-    return this.repo.create({
-      type: this.type,
-      sagaId,
-      status: SagaStatus.RUNNING,
-      currentStep: firstStep,
-      data: initialData,
-      ttl: this.defaultTtlSeconds,
-      expiresAt: this.computeExpiresAt(this.defaultTtlSeconds),
-    });
+    return basicErr('Saga already started and is not resumable');
   }
 
   protected computeExpiresAt(ttlSeconds: number): Date {

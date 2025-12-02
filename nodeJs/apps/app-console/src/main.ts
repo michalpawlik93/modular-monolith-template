@@ -1,5 +1,5 @@
 import 'reflect-metadata';
-import { ACCOUNT_FACADE_TOKEN, cleanConnections, IAccountBaseFacade, IProductBaseFacade, ModuleContainer, PRODUCT_FACADE_TOKEN, setupConnections, runWithContext } from "@app/core";
+import { ACCOUNT_FACADE_TOKEN, ACCOUNT_PRODUCTS_FACADE_TOKEN, cleanConnections, IAccountBaseFacade, IProductBaseFacade, ModuleContainer, PRODUCT_FACADE_TOKEN, setupConnections, runWithContext, IAccountProductsFacade } from "@app/core";
 import { setupContainer } from "./di";
 import { runConsole } from "./application/console";
 
@@ -14,8 +14,9 @@ async function main() {
     await setupConnections(modules);
     const accountFacade = moduleInstances.accounts.container.get<IAccountBaseFacade>(ACCOUNT_FACADE_TOKEN);
     const productFacade = moduleInstances.products.container.get<IProductBaseFacade>(PRODUCT_FACADE_TOKEN);
+    const accountProductsFacade = moduleInstances.accounts.container.get<IAccountProductsFacade>(ACCOUNT_PRODUCTS_FACADE_TOKEN);
     await runWithContext(requestContext,async () => {
-      await runConsole({ accountFacade, productFacade });
+      await runConsole({ accountFacade, productFacade, accountProductsFacade });
     });
 }
 

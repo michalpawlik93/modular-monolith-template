@@ -17,9 +17,9 @@ import {
 } from '@app/core';
 import { PrismaModuleConfig } from '@app/core/prisma';
 import { registerAccountFacades, registerAccountsCommandHandlers } from './application/base';
+import { registerAccountProductsCommandHandlers, registerAccountProductsFacades, registerAccountProductSagas } from './application/accountProducts';
 import { registerAccountLogging } from './infrastructure/logging';
 import { registerAccountsPrisma, registerAccountRepository } from './infrastructure/prisma';
-import { registerAccountSagas } from './application/base/sagas/di';
 
 export interface AccountsDomainConfig {
   prisma?: PrismaModuleConfig;
@@ -71,7 +71,9 @@ export const registerAccountsDomain = (
   registerAccountLogging(container);
   registerAccountsPrisma(container, config.prisma);
   registerAccountRepository(container);
-  registerAccountSagas(container, coreContainer);
+  registerAccountProductSagas(container, coreContainer);
+  registerAccountProductsCommandHandlers(container);
+  registerAccountProductsFacades(container);
   registerAccountsCommandHandlers(container);
   registerAccountFacades(container);
 };

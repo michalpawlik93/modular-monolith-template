@@ -3,18 +3,20 @@ import { ICommandBus } from './serviceBus';
 import { COMMAND_BUS_TOKENS } from './di';
 import { Result, BasicError, ok, basicErr } from '../../utils/result';
 
-export type Transport = 'grpc' | 'inMemory' | 'rabbitMq';
+export type Transport = 'grpc' | 'inMemory';
+export const GRPC_TRANSPORT: Transport = 'grpc';
+export const IN_MEMORY_TRANSPORT: Transport = 'inMemory';
 
 export type BusResolver = (
   transport?: Transport,
 ) => Result<ICommandBus, BasicError>;
 
 const getBusName = (transport: Transport): string => {
-  return transport === 'grpc'
+  return transport === GRPC_TRANSPORT
     ? 'GrpcCommandBus'
-    : transport === 'inMemory'
+    : transport === IN_MEMORY_TRANSPORT
     ? 'InMemoryCommandBus'
-    : 'RabbitMqCommandBus';
+    : 'Unknown';
 };
 
 export const makeBusResolver = (container: Container): BusResolver => {
@@ -24,11 +26,11 @@ export const makeBusResolver = (container: Container): BusResolver => {
     }
 
     const token =
-      transport === 'grpc'
+      transport === GRPC_TRANSPORT
         ? COMMAND_BUS_TOKENS.Grpc
-        : transport === 'inMemory'
+        : transport === IN_MEMORY_TRANSPORT
         ? COMMAND_BUS_TOKENS.InMemory
-        : COMMAND_BUS_TOKENS.RabbitMq;
+        : "Unknown";
 
     if (!container.isBound(token)) {
       const busName = getBusName(transport);

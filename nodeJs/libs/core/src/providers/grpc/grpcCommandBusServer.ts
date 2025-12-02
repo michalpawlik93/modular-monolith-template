@@ -24,6 +24,7 @@ import { isHandlerBound, getHandler } from '../../utils/inversify';
 import { parseGrpcPayload } from './grpcParser';
 import { mapGrpcCompression } from './grpcCompression';
 import type { GrpcServerConfig } from './grpcConfig';
+import { ulid } from 'ulid';
 
 export type InvokeReq = {
   type: string;
@@ -99,9 +100,12 @@ export class GrpcCommandBusServer {
           const env: CoreEnvelope = {
             type: call.request.type,
             payload: parsedPayload,
-        meta: call.request.meta ?? {},
+            meta: {
+              ...call.request.meta,
+              commandId: call.request.meta?.commandId || ulid(),
+            },
           };
-
+          
           const handlerContainer = this.resolveHandlerContainer(env.type);
           if (!handlerContainer) {
             const result = noHandlerErr(env.type);
@@ -135,7 +139,6 @@ export class GrpcCommandBusServer {
             reject(err);
             return;
           }
-          server.start();
           this.server = server;
           resolve();
         },
@@ -165,9 +168,5 @@ function toGrpcResult(
     );
     return { ok: { payload } };
   }
-  const error = res.error ?? {
-    _type: 'BasicError',
-    message: 'Unknown error',
-  };
-  return { err: { _type: error._type, message: error.message } };
+  return { err: res.error };
 }

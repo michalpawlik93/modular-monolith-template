@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import { randomUUID } from 'node:crypto';
 import {
   ok,
   basicErr,
@@ -16,24 +15,16 @@ import {
 import { AccountProductSaga } from '../../sagas/accountProductSaga';
 import { IAccountRepository } from '../../../../infrastructure/prisma/account.repository';
 import { AccountStatusEnum } from '../../../../domain';
-import {
-  CreateProductCommandContract as CreateProductCommand,
-  CreateProductResponseContract as CreateProductResponse,
-  IProductBaseFacade,
-} from '@app/core';
+import { IAccountBaseFacade, IProductBaseFacade, IN_MEMORY_TRANSPORT } from '@app/core';
 
 class FakeSagaRepo {
   state: SagaState<any> | null = null;
 
-  async ensureIndexes() {
-    return ok(null);
-  }
-
   async findBySagaId(type: string, sagaId: string) {
-    if (this.state && this.state.type === type && this.state._id === sagaId) {
-      return ok(this.state);
+    if (!this.state || this.state.type !== type || this.state._id !== sagaId) {
+      return notFoundErr('missing');
     }
-    return ok(null);
+    return ok(this.state);
   }
 
   async create(initial: {
@@ -52,6 +43,7 @@ class FakeSagaRepo {
       data: initial.data,
       currentStep: initial.currentStep,
       ttl: initial.ttl,
+      tempData: null,
       version: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -70,8 +62,14 @@ class FakeSagaRepo {
 }
 
 describe('CreateAccountWithProductsCommandHandler', () => {
+  const accountFacade: jest.Mocked<IAccountBaseFacade> = {
+    invokeCreateAccount: jest.fn(),
+    invokeDeleteAccount: jest.fn(),
+    getPagedAccounts: jest.fn(),
+  };
   const productFacade: jest.Mocked<IProductBaseFacade> = {
     invokeCreateProduct: jest.fn(),
+    invokeDeleteProduct: jest.fn(),
     getPagedProducts: jest.fn(),
   } as any;
   const accountRepository: jest.Mocked<IAccountRepository> = {
@@ -79,6 +77,7 @@ describe('CreateAccountWithProductsCommandHandler', () => {
     createMany: jest.fn(),
     getPaged: jest.fn(),
     update: jest.fn(),
+    delete: jest.fn(),
   } as any;
 
   const buildCommand = (): CreateAccountWithProductsCommand => ({
@@ -105,6 +104,7 @@ describe('CreateAccountWithProductsCommandHandler', () => {
     const saga = new AccountProductSaga(repo as any);
     const handler = new CreateAccountWithProductsCommandHandler(
       accountRepository,
+      accountFacade,
       productFacade,
       saga,
     );
@@ -122,7 +122,7 @@ describe('CreateAccountWithProductsCommandHandler', () => {
     );
     productFacade.invokeCreateProduct.mockResolvedValue(ok({ id: 'prod-1' }));
 
-    const result = await handler.handle({ type: '', payload: buildCommand() });
+    const result = await handler.handle({ type: '', payload: buildCommand(), meta: { commandId: 'cmd-1' }  });
 
     expect(isOk(result)).toBe(true);
     if (isOk(result)) {
@@ -137,15 +137,71 @@ describe('CreateAccountWithProductsCommandHandler', () => {
     const saga = new AccountProductSaga(repo as any);
     const handler = new CreateAccountWithProductsCommandHandler(
       accountRepository,
+      accountFacade,
       productFacade,
       saga,
     );
 
     accountRepository.create.mockResolvedValue(basicErr('failed to create'));
 
-    const result = await handler.handle({ type: '', payload: buildCommand() });
+    const result = await handler.handle({ type: '', payload: buildCommand(), meta: { commandId: 'cmd-1' }  });
 
     expect(isErr(result)).toBe(true);
+    expect(repo.state?.status).toBe(SagaStatus.COMPENSATED);
+    expect(accountFacade.invokeDeleteAccount).not.toHaveBeenCalled();
+    expect(productFacade.invokeDeleteProduct).not.toHaveBeenCalled();
+  });
+
+  it('compensates created resources when product creation fails', async () => {
+    const repo = new FakeSagaRepo();
+    const saga = new AccountProductSaga(repo as any);
+    const handler = new CreateAccountWithProductsCommandHandler(
+      accountRepository,
+      accountFacade,
+      productFacade,
+      saga,
+    );
+
+    accountRepository.create.mockResolvedValue(
+      ok({
+        id: 'acc-1',
+        email: 'user@example.com',
+        displayName: 'Test User',
+        role: 'user',
+        status: AccountStatusEnum.enum.active,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+    );
+    productFacade.invokeCreateProduct
+      .mockResolvedValueOnce(ok({ id: 'prod-1' }))
+      .mockResolvedValueOnce(basicErr('product failed'));
+    accountFacade.invokeDeleteAccount.mockResolvedValue(ok({ id: 'acc-1' }));
+    productFacade.invokeDeleteProduct.mockResolvedValue(ok({ id: 'prod-1' }));
+
+    const command: CreateAccountWithProductsCommand = {
+      ...buildCommand(),
+      products: [
+        { name: 'P1', priceCents: 100 },
+        { name: 'P2', priceCents: 200 },
+      ],
+    };
+
+    const result = await handler.handle({
+      type: '',
+      payload: command,
+      meta: { commandId: 'cmd-1' },
+    });
+
+    expect(isErr(result)).toBe(true);
+    expect(accountFacade.invokeDeleteAccount).toHaveBeenCalledWith(
+      { id: 'acc-1' },
+      { via: IN_MEMORY_TRANSPORT },
+    );
+    expect(productFacade.invokeDeleteProduct).toHaveBeenCalledWith(
+      { id: 'prod-1' },
+      { via: IN_MEMORY_TRANSPORT },
+    );
     expect(repo.state?.status).toBe(SagaStatus.COMPENSATED);
   });
 });

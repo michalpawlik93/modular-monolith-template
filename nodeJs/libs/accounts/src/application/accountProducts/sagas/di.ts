@@ -8,7 +8,7 @@ import { AccountProductSaga, AccountProductSagaData } from './accountProductSaga
 
 export const ACCOUNT_SAGA_REPOSITORY = Symbol.for('AccountSagaRepository');
 
-export const registerAccountSagas = (
+export const registerAccountProductSagas = (
   container: Container,
   coreContainer: Container,
 ): void => {

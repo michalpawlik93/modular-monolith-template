@@ -1,4 +1,4 @@
-import { Result, BasicError } from '@app/core';
+import { Result, BasicError, IN_MEMORY_TRANSPORT } from '@app/core';
 import {
   IAccountBaseFacade,
   CreateAccountCommandContract,
@@ -9,5 +9,5 @@ export const invokeCreateAccount = async (
   facade: IAccountBaseFacade,
   payload: CreateAccountCommandContract,
 ): Promise<Result<CreateAccountResponseContract, BasicError>> => {
-  return facade.invokeCreateAccount(payload, { via: 'inMemory' });
+  return facade.invokeCreateAccount(payload, { via: IN_MEMORY_TRANSPORT });
 };

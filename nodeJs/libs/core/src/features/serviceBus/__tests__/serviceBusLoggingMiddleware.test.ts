@@ -22,7 +22,7 @@ describe('ServiceBusLoggingMiddleware', () => {
     const createEnvelope = (payload: Record<string, unknown> = {}): Envelope => ({
       type: 'test.command',
       payload,
-      meta: { correlationId: 'corr-123' },
+      meta: { correlationId: 'corr-123', commandId: 'cmd-123' },
     });
 
     test('should log info when processing starts', async () => {
@@ -39,7 +39,7 @@ describe('ServiceBusLoggingMiddleware', () => {
         {
           commandType: 'test.command',
           commandId: 'cmd-123',
-          meta: { correlationId: 'corr-123' },
+          meta: { correlationId: 'corr-123', commandId: 'cmd-123' },
         },
         'Processing command: test.command, id: cmd-123'
       );
@@ -189,7 +189,7 @@ describe('ServiceBusLoggingMiddleware', () => {
       const envelope: Envelope = {
         type: 'test.command',
         payload: { id: 'cmd-123' },
-        meta: { correlationId: 'corr-456', userId: 'user-789' },
+        meta: { correlationId: 'corr-456', userId: 'user-789', commandId: 'cmd-123' },
       };
       const nextResult = ok(null);
       const next = jest.fn().mockResolvedValue(nextResult);
@@ -200,7 +200,11 @@ describe('ServiceBusLoggingMiddleware', () => {
         {
           commandType: 'test.command',
           commandId: 'cmd-123',
-          meta: { correlationId: 'corr-456', userId: 'user-789' },
+          meta: {
+            correlationId: 'corr-456',
+            userId: 'user-789',
+            commandId: 'cmd-123',
+          },
         },
         expect.any(String)
       );
@@ -239,6 +243,7 @@ describe('ServiceBusLoggingMiddleware', () => {
       const envelope: Envelope = {
         type: 'test.command',
         payload: { id: 'cmd-123' },
+        meta: { commandId: 'cmd-123' },
       };
       const nextResult = ok(null);
       const next = jest.fn().mockResolvedValue(nextResult);
@@ -249,7 +254,7 @@ describe('ServiceBusLoggingMiddleware', () => {
         {
           commandType: 'test.command',
           commandId: 'cmd-123',
-          meta: undefined,
+          meta: { commandId: 'cmd-123' },
         },
         expect.any(String)
       );

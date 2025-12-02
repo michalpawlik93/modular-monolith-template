@@ -1,6 +1,6 @@
 import { createInterface } from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
-import { isOk, BasicError, Result, Pager, PagerResult, CreateAccountCommandContract, CreateProductCommandContract, CreateAccountWithProductsCommandContract, CreateAccountResponseContract, CreateProductResponseContract, CreateAccountWithProductsResponseContract, ProductContract, AccountContract } from '@app/core';
+import { isOk, BasicError, Result, Pager, PagerResult, CreateAccountCommandContract, CreateProductCommandContract, CreateAccountWithProductsCommandContract, CreateAccountResponseContract, CreateProductResponseContract, CreateAccountWithProductsResponseContract, ProductContract, AccountContract, IAccountProductsFacade } from '@app/core';
 import {
   IAccountBaseFacade,
   IProductBaseFacade,
@@ -16,6 +16,7 @@ class ConsoleApp {
   constructor(
     private readonly accountFacade: IAccountBaseFacade,
     private readonly productFacade: IProductBaseFacade,
+    private readonly accountProductsFacade: IAccountProductsFacade,
   ) {}
 
   async run(): Promise<void> {
@@ -85,7 +86,6 @@ class ConsoleApp {
     const accountId = `account-${Date.now()}`;
     const productId = `product-${Date.now()}`;
     return {
-      commandId: `account-saga-${Date.now()}`,
       account: {
         id: accountId,
         email: `user${Date.now()}@example.com`,
@@ -145,7 +145,7 @@ class ConsoleApp {
     );
 
     const result = await invokeCreateAccountWithProducts(
-      this.accountFacade,
+      this.accountProductsFacade,
       payload,
     );
     this.logInvokeResult(result);
@@ -213,7 +213,8 @@ class ConsoleApp {
 export const runConsole = async (params: {
   accountFacade: IAccountBaseFacade;
   productFacade: IProductBaseFacade;
+  accountProductsFacade: IAccountProductsFacade;
 }): Promise<void> => {
-  const app = new ConsoleApp(params.accountFacade, params.productFacade);
+  const app = new ConsoleApp(params.accountFacade, params.productFacade, params.accountProductsFacade);
   await app.run();
 };

@@ -1,0 +1,1 @@
+export {registerAccountProductSagas} from './di';

@@ -10,6 +10,11 @@ import {
   CreateProductCommand,
   CreateProductCommandHandler,
 } from './createProductCommandHandler';
+import {
+  DELETE_PRODUCT_COMMAND_TYPE,
+  DeleteProductCommand,
+  DeleteProductCommandHandler,
+} from './deleteProductCommandHandler';
 
 export const registerProductsCommandHandlers = (container: Container) => {
   container
@@ -23,4 +28,10 @@ export const registerProductsCommandHandlers = (container: Container) => {
     .to(CreateProductCommandHandler)
     .inSingletonScope()
     .whenNamed(CREATE_PRODUCT_COMMAND_TYPE);
+
+  container
+    .bind<Handler<DeleteProductCommand>>(TYPES.Handler)
+    .to(DeleteProductCommandHandler)
+    .inSingletonScope()
+    .whenNamed(DELETE_PRODUCT_COMMAND_TYPE);
 };

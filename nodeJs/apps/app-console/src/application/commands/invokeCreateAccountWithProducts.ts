@@ -1,14 +1,15 @@
 import {
   Result,
   BasicError,
-  IAccountBaseFacade,
+  IAccountProductsFacade,
   CreateAccountWithProductsResponseContract,
   CreateAccountWithProductsCommandContract,
+  IN_MEMORY_TRANSPORT,
 } from '@app/core';
 
 export const invokeCreateAccountWithProducts = async (
-  facade: IAccountBaseFacade,
+  facade: IAccountProductsFacade,
   payload: CreateAccountWithProductsCommandContract,
 ): Promise<Result<CreateAccountWithProductsResponseContract, BasicError>> => {
-  return facade.invokeCreateAccountWithProducts(payload, { via: 'inMemory' });
+  return facade.invokeCreateAccountWithProducts(payload, { via: IN_MEMORY_TRANSPORT });
 };

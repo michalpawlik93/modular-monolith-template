@@ -15,7 +15,6 @@ export const COMMAND_BUS_TOKENS = {
   CommandBus: Symbol.for('ICommandBus'),
   InMemory: Symbol('InMemoryCommandBus'),
   Grpc: Symbol('GrpcCommandBus'),
-  RabbitMq: Symbol('RabbitMqCommandBus'),
 } as const;
 
 export const registerServiceBus = (

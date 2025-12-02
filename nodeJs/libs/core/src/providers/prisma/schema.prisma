@@ -7,10 +7,3 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL_CORE")
 }
-
-model AuditLog {
-  id        String   @id @default(cuid())
-  module    String
-  action    String
-  createdAt DateTime @default(now())
-}

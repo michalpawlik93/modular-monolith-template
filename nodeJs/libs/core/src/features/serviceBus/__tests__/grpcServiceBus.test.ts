@@ -106,6 +106,7 @@ describe('GrpcServiceBus', () => {
         correlationId: 'corr-1',
         userId: 'user-1',
         source: 'tests',
+        commandId: 'cmd-1',
       },
     });
 
@@ -179,6 +180,7 @@ describe('GrpcServiceBus', () => {
     await bus.invoke({
       type: 'Unknown.Command',
       payload: {},
+      meta: { commandId: 'cmd-1' },
     });
 
     expect(commandBusCtorMock).toHaveBeenCalledWith(
@@ -214,6 +216,7 @@ describe('GrpcServiceBus', () => {
     const result = await bus.invoke({
       type: 'Lookup.Create',
       payload: {},
+      meta: { commandId: 'cmd-1' },
     });
 
     expect(isErr(result)).toBe(true);
@@ -246,6 +249,7 @@ describe('GrpcServiceBus', () => {
     const result = await bus.invoke({
       type: 'Lookup.Create',
       payload: {},
+      meta: { commandId: 'cmd-1' },
     });
 
     expect(isErr(result)).toBe(true);
@@ -306,6 +310,7 @@ describe('GrpcServiceBus', () => {
     const result = await bus.invoke({
       type: 'Lookup.Create',
       payload: {},
+      meta: { commandId: 'cmd-1' },
     });
 
     expect(invokeImpl).toHaveBeenCalledTimes(2);

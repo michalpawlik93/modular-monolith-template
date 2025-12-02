@@ -44,9 +44,6 @@ export class CreateAccountCommandHandler
     env: Envelope<CreateAccountCommand>,
   ): Promise<Result<CreateAccountResponse, BasicError>> {
     const { id, email, displayName, role, status } = env.payload;
-    if (!email || !displayName) {
-      return basicErr('Missing required fields');
-    }
     const statusValue = AccountStatusEnum.parse(
       status ?? AccountStatusEnum.enum.active,
     );

@@ -10,6 +10,7 @@ import {
   basicErr,
   isErr,
   SagaState,
+  IN_MEMORY_TRANSPORT,
 } from '@app/core';
 import {
   IAccountRepository,
@@ -22,6 +23,8 @@ import {
   AccountProductSagaTempData,
 } from '../sagas/accountProductSaga';
 import {
+  ACCOUNT_FACADE_TOKEN,
+  IAccountBaseFacade,
   IProductBaseFacade,
   PRODUCT_FACADE_TOKEN,
 } from '@app/core';
@@ -31,7 +34,6 @@ export const CREATE_ACCOUNT_WITH_PRODUCTS_COMMAND_TYPE =
   'account.createWithProducts';
 
 export interface CreateAccountWithProductsCommand extends BaseCommand {
-  commandId?: string;
   account: {
     id?: string;
     email: string;
@@ -59,6 +61,8 @@ export class CreateAccountWithProductsCommandHandler
   constructor(
     @inject(ACCOUNT_REPOSITORY_KEY)
     private readonly accountRepository: IAccountRepository,
+    @inject(ACCOUNT_FACADE_TOKEN)
+    private readonly accountFacade: IAccountBaseFacade,
     @inject(PRODUCT_FACADE_TOKEN)
     private readonly productFacade: IProductBaseFacade,
     @inject(AccountProductSaga)
@@ -83,8 +87,6 @@ export class CreateAccountWithProductsCommandHandler
         priceCents: p.priceCents,
       })) ?? [];
 
-    const commandId = payload.commandId ?? ulid();
-
     const sagaTempData: AccountProductSagaTempData = {
       account: {
         id: accountId,
@@ -98,8 +100,9 @@ export class CreateAccountWithProductsCommandHandler
       productIds: [],
     };
 
+    console.log('env.meta.commandId:', env.meta.commandId);
     const sagaStateResult = await this.saga.startForCommand(
-      commandId,
+      env.meta.commandId,
       sagaTempData,
     );
     if (isErr(sagaStateResult)) {
@@ -148,7 +151,7 @@ export class CreateAccountWithProductsCommandHandler
           name: product.name,
           priceCents: product.priceCents,
         },
-        { via: 'inMemory' },
+        { via:IN_MEMORY_TRANSPORT },
       );
 
       if (isErr(productResult)) {
@@ -192,13 +195,34 @@ export class CreateAccountWithProductsCommandHandler
           if (productIds.length === 0) {
             return ok(undefined);
           }
-          return basicErr('Product compensation not implemented');
+          for (const productId of productIds) {
+            const deleteResult = await this.productFacade.invokeDeleteProduct(
+              { id: productId },
+              { via: IN_MEMORY_TRANSPORT },
+            );
+            if (isErr(deleteResult)) {
+              return basicErr(
+                `Failed to delete product ${productId}: ${deleteResult.error.message}`,
+              );
+            }
+          }
+          return ok(undefined);
         },
         compensateAccount: async () => {
-          if (!this.saga.sagaTempData?.accountId) {
+          const accountId = this.saga.sagaTempData?.accountId;
+          if (!accountId) {
             return ok(undefined);
           }
-          return basicErr('Account compensation not implemented');
+          const deleteResult = await this.accountFacade.invokeDeleteAccount(
+            { id: accountId },
+            { via: IN_MEMORY_TRANSPORT },
+          );
+          if (isErr(deleteResult)) {
+            return basicErr(
+              `Failed to delete account ${accountId}: ${deleteResult.error.message}`,
+            );
+          }
+          return ok(undefined);
         },
       },
     );

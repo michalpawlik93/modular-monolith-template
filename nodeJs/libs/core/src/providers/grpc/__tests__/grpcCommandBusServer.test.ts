@@ -190,7 +190,10 @@ describe('GrpcCommandBusServer', () => {
     expect(handler.handle).toHaveBeenCalledWith({
       type: 'Lookup.Create',
       payload: { id: 'cmd-1' },
-      meta: { correlationId: 'corr-1' },
+      meta: expect.objectContaining({
+        correlationId: 'corr-1',
+        commandId: expect.any(String),
+      }),
     });
     expect(callback).toHaveBeenCalledWith(null, {
       ok: {

@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Container } from 'inversify';
-import { makeBusResolver } from '../resolveBus';
+import { GRPC_TRANSPORT, IN_MEMORY_TRANSPORT, makeBusResolver } from '../resolveBus';
 import { COMMAND_BUS_TOKENS } from '../di';
 import { ICommandBus } from '../serviceBus';
 import { isOk, isErr } from '../../../utils/result';
@@ -21,7 +21,7 @@ describe('makeBusResolver', () => {
       .inSingletonScope();
 
     const resolver = makeBusResolver(container);
-    const result = resolver('inMemory');
+    const result = resolver(IN_MEMORY_TRANSPORT);
 
     expect(isOk(result)).toBe(true);
     if (isOk(result)) {
@@ -31,7 +31,7 @@ describe('makeBusResolver', () => {
 
   it('returns error when transport is not registered', () => {
     const resolver = makeBusResolver(container);
-    const result = resolver('grpc');
+    const result = resolver(GRPC_TRANSPORT);
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
@@ -43,7 +43,7 @@ describe('makeBusResolver', () => {
 
   it('returns error with correct message for grpc transport', () => {
     const resolver = makeBusResolver(container);
-    const result = resolver('grpc');
+    const result = resolver(GRPC_TRANSPORT);
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
@@ -55,24 +55,12 @@ describe('makeBusResolver', () => {
 
   it('returns error with correct message for inMemory transport', () => {
     const resolver = makeBusResolver(container);
-    const result = resolver('inMemory');
+    const result = resolver(IN_MEMORY_TRANSPORT);
 
     expect(isErr(result)).toBe(true);
     if (isErr(result)) {
       expect(result.error.message).toBe(
         'InMemoryCommandBus is not registered in the container',
-      );
-    }
-  });
-
-  it('returns error with correct message for rabbitMq transport', () => {
-    const resolver = makeBusResolver(container);
-    const result = resolver('rabbitMq');
-
-    expect(isErr(result)).toBe(true);
-    if (isErr(result)) {
-      expect(result.error.message).toBe(
-        'RabbitMqCommandBus is not registered in the container',
       );
     }
   });
@@ -94,7 +82,7 @@ describe('makeBusResolver', () => {
       .inSingletonScope();
 
     const resolver = makeBusResolver(container);
-    const inMemoryResult = resolver('inMemory');
+    const inMemoryResult = resolver(IN_MEMORY_TRANSPORT);
 
     expect(isOk(inMemoryResult)).toBe(true);
     if (isOk(inMemoryResult)) {

@@ -13,8 +13,8 @@ import {
 import {
   CreateAccountCommandContract,
   CreateAccountResponseContract,
-  CreateAccountWithProductsCommandContract,
-  CreateAccountWithProductsResponseContract,
+  DeleteAccountCommandContract,
+  DeleteAccountResponseContract,
   IAccountBaseFacade,
   AccountContract,
 } from '@app/core';
@@ -24,15 +24,16 @@ import {
   CreateAccountResponse,
 } from '../handlers/createAccountCommandHandler';
 import {
-  CreateAccountWithProductsCommand,
-  CreateAccountWithProductsResponse,
-  CREATE_ACCOUNT_WITH_PRODUCTS_COMMAND_TYPE,
-} from '../handlers/createAccountWithProductsCommandHandler';
+  DELETE_ACCOUNT_COMMAND_TYPE,
+  DeleteAccountCommand,
+  DeleteAccountResponse,
+} from '../handlers/deleteAccountCommandHandler';
 import {
   GET_PAGED_ACCOUNTS_COMMAND,
   GetPagedAccountsCommand,
 } from '../handlers/getPagedAccountsCommandHandler';
 import { Account } from '../../../domain';
+import { ulid } from 'ulid';
 
 @injectable()
 export class AccountBaseFacade
@@ -55,6 +56,7 @@ export class AccountBaseFacade
     const envelope: Envelope<CreateAccountCommand> = {
       type: CREATE_ACCOUNT_COMMAND_TYPE,
       payload: payload as CreateAccountCommand,
+      meta: {commandId: ulid()},
     };
 
     return busResult.value.invoke<
@@ -63,26 +65,25 @@ export class AccountBaseFacade
     >(envelope);
   }
 
-  async invokeCreateAccountWithProducts(
-    payload: CreateAccountWithProductsCommandContract,
+  async invokeDeleteAccount(
+    payload: DeleteAccountCommandContract,
     opts?: { via?: Transport },
-  ): Promise<
-    Result<CreateAccountWithProductsResponseContract, BasicError>
-  > {
+  ): Promise<Result<DeleteAccountResponseContract, BasicError>> {
     const busResult = this.resolveBus(opts?.via);
 
     if (isErr(busResult)) {
       return busResult;
     }
 
-    const envelope: Envelope<CreateAccountWithProductsCommand> = {
-      type: CREATE_ACCOUNT_WITH_PRODUCTS_COMMAND_TYPE,
-      payload: payload as CreateAccountWithProductsCommand,
+    const envelope: Envelope<DeleteAccountCommand> = {
+      type: DELETE_ACCOUNT_COMMAND_TYPE,
+      payload: payload as DeleteAccountCommand,
+      meta: { commandId: ulid() },
     };
 
     return busResult.value.invoke<
-      CreateAccountWithProductsCommand,
-      CreateAccountWithProductsResponse
+      DeleteAccountCommand,
+      DeleteAccountResponse
     >(envelope);
   }
 
@@ -99,6 +100,7 @@ export class AccountBaseFacade
     const envelope: Envelope<GetPagedAccountsCommand> = {
       type: GET_PAGED_ACCOUNTS_COMMAND,
       payload: { pager },
+      meta: {commandId: ulid()},
     };
 
     return busResult.value.invoke<

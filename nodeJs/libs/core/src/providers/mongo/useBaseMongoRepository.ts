@@ -5,8 +5,7 @@ import {
   WithId,
   IndexDescription,
   UpdateFilter,
-  ClientSession,
-  MongoClient,
+  CreateIndexesOptions,
 } from 'mongodb';
 import {
   Result,
@@ -14,6 +13,7 @@ import {
   notFoundErr,
   BasicError,
   basicErr,
+  getErrorMessage,
 } from '../../utils/result';
 import { Pager, PagerResult } from '../../utils/paging';
 
@@ -27,8 +27,10 @@ export interface IBaseRepository<
   getById(id: string): Promise<Result<TDomain, BasicError>>;
   getByIds(ids: string[]): Promise<Result<TDomain[], BasicError>>;
   createIndex: <K extends keyof TDao>(
-    fieldName: K
+    fieldName: K,
+    options?: CreateIndexesOptions
   ) => Promise<Result<string, BasicError>>;
+  findOne(filter: Filter<TDao>): Promise<Result<TDomain | null, BasicError>>;
   getPaged(
     pager: Pager,
     filter?: GetFilter<TDao>,
@@ -37,25 +39,18 @@ export interface IBaseRepository<
   ): Promise<Result<PagerResult<TDomain>, BasicError>>;
   getFiltered(filter: Filter<TDao>): Promise<Result<TDomain[], BasicError>>;
   update(
-    id: string,
-    update: Partial<TDomain>
+    filter: Filter<TDao>,
+    update: UpdateFilter<TDao>,
+    notFoundMessage?: string
   ): Promise<Result<TDomain, BasicError>>;
   createMany(domainEntities: TDomain[]): Promise<Result<TDomain[], BasicError>>;
   delete(id: string): Promise<Result<void, BasicError>>;
   deleteMany(filter: Filter<TDao>): Promise<Result<void, BasicError>>;
-  executeTransaction<T>(
-    operation: (session: ClientSession) => Promise<T>
-  ): Promise<Result<T, BasicError>>;
 }
 
 type BaseDao = { _id: string };
 type BaseDomain = { id: string };
 export type GetFilter<T> = { propertyName: keyof T; propertyValue: string };
-
-const getErrorMessage = (error: unknown): string =>
-  error instanceof Error ? error.message : String(error);
-
-type DbWithClient = Db & { client?: MongoClient };
 
 export const useBaseRepository = <
   TDomain extends BaseDomain,
@@ -86,7 +81,7 @@ export const useBaseRepository = <
           return ok(domainEntity, ['Entity created successfully']);
         }
       } catch (error: unknown) {
-        return notFoundErr(
+        return basicErr(
           `Failed to create/update entity: ${getErrorMessage(error)}`
         );
       }
@@ -180,22 +175,42 @@ export const useBaseRepository = <
     },
 
     async createIndex<K extends keyof TDao>(
-      fieldName: K
+      fieldName: K,
+      options?: CreateIndexesOptions
     ): Promise<Result<string, BasicError>> {
       try {
         const collection = db.collection<TDao>(collectionName);
         const indexes: IndexDescription[] = await collection
           .listIndexes()
           .toArray();
-        const indexSpec = { [fieldName as string]: 1 };
-        const exists = indexes.some((idx) => idx.name === fieldName);
+        const indexName = options?.name ?? String(fieldName);
+        const exists = indexes.some((idx) => idx.name === indexName);
         if (exists) {
           return ok('Index already exists');
         }
-        const indexName = await collection.createIndex(indexSpec);
-        return ok(`Index created successfully on field: ${indexName}`);
+        const createdIndexName = await collection.createIndex(
+          { [fieldName as string]: 1 },
+          { ...options, name: indexName }
+        );
+        return ok(`Index created successfully on field: ${createdIndexName}`);
       } catch (error: unknown) {
-        return notFoundErr(`Failed to create index: ${getErrorMessage(error)}`);
+        return basicErr(`Failed to create index: ${getErrorMessage(error)}`);
+      }
+    },
+
+    async findOne(
+      filter: Filter<TDao>
+    ): Promise<Result<TDomain, BasicError>> {
+      try {
+        const result = await db
+          .collection<TDao>(collectionName)
+          .findOne(filter);
+        if (!result) {
+           return notFoundErr(`Document with id ${filter._id} not found`);
+        }
+        return ok(toDomain(result));
+      } catch (error: unknown) {
+        return basicErr(`Failed to find entity: ${getErrorMessage(error)}`);
       }
     },
 
@@ -243,7 +258,7 @@ export const useBaseRepository = <
           cursor: nextCursor,
         });
       } catch (error: unknown) {
-        return notFoundErr(`Pagination failed: ${getErrorMessage(error)}`);
+        return basicErr(`Pagination failed: ${getErrorMessage(error)}`);
       }
     },
 
@@ -262,25 +277,25 @@ export const useBaseRepository = <
     },
 
     async update(
-      id: string,
-      update: Partial<TDomain>
+      filter: Filter<TDao>,
+      update: UpdateFilter<TDao>,
+      notFoundMessage?: string
     ): Promise<Result<TDomain, BasicError>> {
-      const filter: Filter<BaseDao> = { _id: id };
-      const updateFilter: UpdateFilter<TDao> = {
-        $set: Object.fromEntries(
-          Object.entries(update).map(([key, value]) => [key, value])
-        ) as Partial<TDao>,
-      };
+      try {
+        const result = await db
+          .collection<TDao>(collectionName)
+          .findOneAndUpdate(filter, update, { returnDocument: 'after' });
 
-      const result = await db
-        .collection<TDao>(collectionName)
-        .findOneAndUpdate(filter, updateFilter, { returnDocument: 'after' });
+        if (!result) {
+          return notFoundErr(
+            notFoundMessage ?? 'Document matching the filter criteria not found'
+          );
+        }
 
-      if (!result) {
-        return notFoundErr(`Document with id ${id} not found`);
+        return ok(toDomain(result), ['Entity updated successfully']);
+      } catch (error: unknown) {
+        return basicErr(`Failed to update entity: ${getErrorMessage(error)}`);
       }
-
-      return ok(toDomain(result), ['Entity updated successfully']);
     },
 
     async delete(id: string): Promise<Result<void, BasicError>> {
@@ -306,36 +321,6 @@ export const useBaseRepository = <
       }
 
       return ok(undefined, [`${result.deletedCount} entities deleted`]);
-    },
-
-    async executeTransaction<T>(
-      operation: (session: ClientSession) => Promise<T>
-    ): Promise<Result<T, BasicError>> {
-      const client = (db as DbWithClient).client;
-
-      if (!client) {
-        return basicErr('MongoDB client session is not available');
-      }
-
-      const session = client.startSession();
-
-      try {
-        let operationResult: T | undefined;
-
-        await session.withTransaction(async () => {
-          operationResult = await operation(session);
-        });
-
-        if (typeof operationResult === 'undefined') {
-          return basicErr('Transaction operation did not return a result');
-        }
-
-        return ok(operationResult);
-      } catch (error: unknown) {
-        return notFoundErr(`Transaction failed: ${getErrorMessage(error)}`);
-      } finally {
-        await session.endSession();
-      }
     },
   };
 };

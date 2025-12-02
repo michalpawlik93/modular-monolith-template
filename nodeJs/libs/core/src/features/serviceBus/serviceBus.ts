@@ -10,6 +10,7 @@ import {
 export type BaseCommand = Record<string, unknown>;
 
 export interface Metadata {
+  commandId: string;
   correlationId?: string;
   userId?: string;
   source?: string;
@@ -18,7 +19,7 @@ export interface Metadata {
 export interface Envelope<T extends BaseCommand = BaseCommand> {
   type: string;
   payload: T;
-  meta?: Metadata;
+  meta: Metadata;
 }
 
 export interface Handler<T extends BaseCommand = BaseCommand, R = unknown> {

@@ -139,3 +139,6 @@ export function mapOkMessages<T, U, E extends BasicError>(
   }
   return result as Err<E>;
 }
+
+export const getErrorMessage = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);

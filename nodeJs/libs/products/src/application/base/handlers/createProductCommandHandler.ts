@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { inject, injectable } from 'inversify';
-import { Handler, Envelope, BaseCommand, Result, BasicError, ok, basicErr, isErr } from '@app/core';
+import { Handler, Envelope, BaseCommand, Result, BasicError, ok, isErr } from '@app/core';
 import { IProductsRepository, PRODUCTS_REPOSITORY_KEY } from '../../../infrastructure/prisma/products.repository';
 
 export const CREATE_PRODUCT_COMMAND_TYPE = 'product.create';
@@ -28,10 +28,6 @@ export class CreateProductCommandHandler
     env: Envelope<CreateProductCommand>,
   ): Promise<Result<CreateProductResponse, BasicError>> {
     const { id, name, priceCents } = env.payload;
-    if (!name || priceCents === undefined || priceCents === null) {
-      return basicErr('Missing required fields');
-    }
-
     const result = await this.repo.create({
       id,
       name,
