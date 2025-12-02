@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { isOk, isErr } from '@app/core';
 import { AccountRepository } from '../account.repository';
 import { AccountStatusEnum } from '../../../domain/models/account';

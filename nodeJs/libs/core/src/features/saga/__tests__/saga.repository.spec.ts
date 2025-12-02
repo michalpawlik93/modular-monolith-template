@@ -1,4 +1,5 @@
-import { ok, isOk, isErr, notFoundErr } from '@app/core';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { ok, isOk, isErr, notFoundErr } from '../../../utils/result';
 import { MongoSagaRepository } from '../saga.repository';
 import { SagaStatus, SagaState } from '../saga.types';
 import {

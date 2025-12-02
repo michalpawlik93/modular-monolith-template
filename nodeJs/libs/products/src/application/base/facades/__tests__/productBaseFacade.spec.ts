@@ -22,6 +22,8 @@ import {
   GET_PAGED_PRODUCTS_COMMAND,
   GetPagedProductsCommand,
 } from '../../handlers/getPagedProductsCommandHandler';
+import { PagerResult } from '@app/core';
+import { ProductContract } from '@app/core';
 
 const setupContainer = (): Container => {
   const container = new Container();
@@ -63,7 +65,10 @@ describe('ProductBaseFacade', () => {
       expect(env.payload.pager.pageSize).toBe(2);
       return ok({ data: [], cursor: undefined });
     });
-    registerCommandHandlerMock<GetPagedProductsCommand, any>(
+    registerCommandHandlerMock<
+      GetPagedProductsCommand,
+      PagerResult<ProductContract>
+    >(
       container,
       GET_PAGED_PRODUCTS_COMMAND,
       { defaultResult: handler },

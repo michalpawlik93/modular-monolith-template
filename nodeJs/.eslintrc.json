@@ -4,7 +4,8 @@
     "**/node_modules/**",
     "**/dist/**",
     "**/.nx/**",
-    "**/coverage/**"
+    "**/coverage/**",
+    "**/prisma/generated/**"
   ],
   "plugins": ["@nx"],
   "extends": ["plugin:@nx/typescript"],

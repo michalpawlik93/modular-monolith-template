@@ -35,7 +35,6 @@ const commandBusCtorMock = jest.fn();
 describe('GrpcServiceBus', () => {
   let container: Container;
   let invokeImpl: jest.Mock;
-  let clientFactory: GrpcClientFactory;
   let busPackage: BusPackage;
 
   beforeEach(() => {
@@ -63,7 +62,6 @@ describe('GrpcServiceBus', () => {
       },
     } as unknown as BusPackage;
 
-    clientFactory = new GrpcClientFactory(busPackage);
   });
 
   test('invokes gRPC client and parses successful response', async () => {

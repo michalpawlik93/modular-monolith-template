@@ -71,7 +71,9 @@ export const connectProductsInfrastructure = async (
   }
 
   const mongo = container.get<MongoConnection>(MONGO_TOKENS.MONGOCONNECTION_KEY);
-  const result = await mongo.connect(() => {});
+  const result = await mongo.connect(() => {
+    console.error('Mongo connection failed for products module');
+  });
   if (isErr(result)) {
     console.error(result.error.message);
   }
@@ -85,7 +87,9 @@ export const disconnectProductsInfrastructure = async (
       const mongo = container.get<MongoConnection>(
         MONGO_TOKENS.MONGOCONNECTION_KEY,
       );
-      await mongo.close(() => {});
+      await mongo.close(() => {
+        console.error('Mongo disconnect failed for products module');
+      });
     }
   } catch (error) {
     console.error('Error disconnecting:', error);

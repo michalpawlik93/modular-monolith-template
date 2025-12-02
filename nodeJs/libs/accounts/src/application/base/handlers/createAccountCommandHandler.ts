@@ -8,7 +8,6 @@ import {
   Result,
   BasicError,
   ok,
-  basicErr,
   isErr,
 } from '@app/core';
 import {

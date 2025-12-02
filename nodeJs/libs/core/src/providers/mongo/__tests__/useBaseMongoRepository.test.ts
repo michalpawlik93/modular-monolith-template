@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Db, Collection, WithId, IndexDescription } from 'mongodb';
 import { useBaseRepository } from '../useBaseMongoRepository';
 import { ok, notFoundErr, basicErr } from '../../../utils/result';

@@ -86,7 +86,9 @@ export const connectAccountsInfrastructure = async (
   }
 
   const mongo = container.get<MongoConnection>(MONGO_TOKENS.MONGOCONNECTION_KEY);
-  const result = await mongo.connect(() => {});
+  const result = await mongo.connect(() => {
+    console.error('Mongo connection failed for accounts module');
+  });
   if (isErr(result)) {
     console.error(result.error.message);
     return;
@@ -101,7 +103,9 @@ export const disconnectAccountsInfrastructure = async (
       const mongo = container.get<MongoConnection>(
         MONGO_TOKENS.MONGOCONNECTION_KEY,
       );
-      await mongo.close(() => {});
+      await mongo.close(() => {
+        console.error('Mongo disconnect failed for accounts module');
+      });
     }
   } catch (error) {
     console.error('Error disconnecting:', error);

@@ -1,7 +1,6 @@
 import { Container } from 'inversify';
-import { type LoggerConfig, registerLogging, RequestContext, registerCoreSagaRepository, CORE_SAGA_REPOSITORY } from './features';
+import { type LoggerConfig, registerLogging, RequestContext, registerCoreSagaRepository } from './features';
 import { CORE_MONGO_TOKENS, MongoConfig, MongoConnection, registerMongoConnection } from './providers';
-import { MongoSagaRepository } from './features';
 import { bindRequestContext, isErr } from './utils';
 
 export interface CoreModuleConfig {
@@ -32,7 +31,9 @@ export const connectCoreInfrastructure = async (
   }
 
   const mongo = container.get<MongoConnection>(CORE_MONGO_TOKENS.MONGOCONNECTION_KEY);
-  const result = await mongo.connect(() => {});
+  const result = await mongo.connect(() => {
+    console.error('Mongo connection failed for core module');
+  });
   if (isErr(result)) {
     console.error(result.error.message);
     return;
@@ -47,7 +48,9 @@ export const disconnectCoreInfrastructure = async (
       const mongo = container.get<MongoConnection>(
         CORE_MONGO_TOKENS.MONGOCONNECTION_KEY,
       );
-      await mongo.close(() => {});
+      await mongo.close(() => {
+        console.error('Mongo disconnect failed for core module');
+      });
     }
   } catch (error) {
     console.error('Error disconnecting:', error);
